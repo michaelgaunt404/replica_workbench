@@ -1,0 +1,30 @@
+#dotfiles~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.RDataTmp
+
+#files~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#example: /name.extrension -> single file
+#example: *.extension -> all files with this extension
+#*.html
+*.RDataTmp
+*.RData
+*.zip
+*.csv
+*.xlsx
+
+#folders~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#example: name/ -> gets rid of folders with this name
+#example: name/** -> gets rid of all files in folder
+cache/
+data/
+output/
+public/*/
+
+analysis/figure
+analysis/*png
+analysis/*html
+analysis/*_cache
+analysis/site_libs
