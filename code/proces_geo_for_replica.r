@@ -27,6 +27,7 @@ library(mapview)
 #source helpers/utilities=======================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #content in this section should be removed if in production - ok for dev
+`%not_in%` = Negate(`%in%`)
 
 #source data====================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,42 +38,84 @@ library(mapview)
 #main header====================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-primary_secondary_roads = tigris::primary_secondary_roads(state = "OR") %>%  
-  st_transform(crs = 4326)
 
-counties = tigris::counties(state = "OR")
-index_remove = counties %>%  
+
+##create_new_dir================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+new_dir_relative = Sys.Date() %>%  
+  str_remove_all("[:punct:]") %>% 
+  paste0("data/geo_", .) 
+
+new_dir_relative %>% 
+  here::here() %>% 
+  dir.create()
+
+new_dir_relative %>% 
+  here::here("geo") %>% 
+  dir.create()
+
+##get all base shapes===========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+counties = tigris::counties(state = c("OR", "WA")) %>% 
+  st_transform(4326)
+
+states = tigris::states() %>%  
+  st_transform(crs = 4326) %>%  
+  filter(NAME %in% c("Washington", "Oregon")) %>%  
+  mutate(id = STATEFP,type = "county") %>%  
+  st_transform(4326) %>% 
+  select(id, type, NAME)
+
+tracts = c("OR", "WA") %>%  
+  map(~tigris::tracts(state = .x, year = 2021) %>%  
+        st_transform(crs = 4326) %>%  
+        select(STATEFP:NAME) %>% 
+        mutate(type = "tract"))  %>%  
+  reduce(rbind)
+  
+  
+
+##make construction shapes=======================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+index_sa = counties %>%  
   filter(NAME %in% c("Multnomah", "Washington", "Clackamas")) %>%  
   pull(COUNTYFP)
 
-states_reduced = tigris::states() %>%  
-  st_transform(crs = 4326) %>%  
-  filter(NAME == "Washington") %>%  
-  mutate(id = STATEFP,type = "county") %>%  
-  select(id, type)
+tracts_sa = tracts %>%  
+  mutate(flag_sa = case_when(COUNTYFP %in% index_sa & 
+                               STATEFP == 41 ~"study area"
+                             ,T~"external area"))   
 
-tracts_reduced = tigris::tracts(state = "OR", year = 2021) %>%  
-  st_transform(crs = 4326) %>%  
-  filter(COUNTYFP %in% index_remove) %>% 
-  mutate(id = GEOID,type = "tract") %>%  
-  select(id, type)
+combined_replica_geos = counties %>%  
+  filter(NAME %not_in% c("Multnomah", "Washington", "Clackamas")) %>%  
+  mutate(flag_sa = "external area"
+         ,type = "county") %>% 
+  select(STATEFP, COUNTYFP, GEOID, NAME, type, flag_sa) %>% 
+  rbind(.,   tracts_sa %>%  
+          mutate(type = "tracts") %>% 
+          select(STATEFP, COUNTYFP, GEOID, NAME, type, flag_sa) %>%   
+          filter(flag_sa == "study area") 
+        ) %>%  
+  rename(name = "NAME"
+         ,id = "GEOID")  %>%  
+  mutate(name = paste0(name, "_", id))
 
-counties_reduced = counties %>%  
-  filter(COUNTYFP %notin% index_remove) %>%  
-  st_transform(crs = 4326) %>%  
-  mutate(id = COUNTYFP,type = "county") %>%  
-  select(id, type)
 
-  mapview::mapview(states_reduced) + 
-    mapview::mapview(tracts_reduced) + 
-    mapview(counties_reduced)
-  
- replica_data = rbind(states_reduced, 
-        tracts_reduced,
-        counties_reduced) 
- 
- replica_data %>% 
-   st_write(here::here("data/gis/replica_data_portland.shp"))
+
+##make construction shapes=======================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+combined_replica_geos %>% 
+  filter(flag_sa != "external area") %>%  
+  st_write(here::here(new_dir_relative, "geo", "internal_tracts_20220810.shp"))
+
+combined_replica_geos %>% 
+  filter(flag_sa == "external area") %>%  
+  st_write(here::here(new_dir_relative, "geo", "external_counties_20220810.shp"))
+
+combined_replica_geos %>% 
+  # filter(flag_sa == "external area") %>%  
+  st_write(here::here(new_dir_relative, "geo", "all_polys_20220810.shp"))
 
 
 ##sub header 1==================================================================
