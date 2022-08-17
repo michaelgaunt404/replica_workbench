@@ -1,11 +1,12 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# This is script [[insert brief readme here]]
+# This is script preps and cleans spatial data from Replica.
 #
 # By: mike gaunt, michael.gaunt@wsp.com
 #
-# README: [[insert brief readme here]]
-#-------- [[insert brief readme here]]
+# README: serves as a backbone to bespoke analyses 
+#-------- not completley automated yet
+#-------- provides functions to process and save network and polys
 #
 # *please use 80 character margins
 #
@@ -16,7 +17,7 @@
 #content in this section should be removed if in production - ok for dev
 library(tidyverse) #- this one has ALL functions
 library(gauntlet)
-# library(tigris)
+library(tigris)
 library(sf)
 library(mapview)
 library(here)
@@ -30,13 +31,76 @@ library(here)
 #content in this section should be removed if in production - ok for dev
 `%notin%` = Negate(`%in%`)
 
-#source data====================================================================
+
+#define focus area==============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#should be slightly bigger than your study area
+#used to spatial filter very large base network 
+counties = tigris::counties(state = c("OR")) %>% 
+  st_transform(4326)
+
+index_sa = counties %>%  
+  filter(NAME %in% c("Multnomah", "Washington", "Clackamas")) %>%  
+  pull(COUNTYFP)
+
+counties_sa = counties %>%  
+  filter(NAME %in% c("Multnomah", "Washington", "Clackamas")) %>%  
+  select() 
+
+counties_sa_buffer = counties_sa %>%  
+  st_combine() %>%  
+  quick_buffer(radius = 20*1609) 
+
+counties_sa_buffer %>%  
+  mapview()
+
+#process network data===========================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #content in this section should be removed if in production - ok for dev
 
-network = here("data/replica_20220801/gis/network.gpkg") %>% 
-  read_sf() %>% 
-  st_transform(4326)
+# network = here("data/replica_20220801/gis/network.gpkg") %>% 
+#   read_sf() %>% 
+#   st_transform(4326)
+
+network_reduced = network %>%  
+  filter(highway %notin% c("footway", "residential","path", "unclassified"
+                           ,"service", "track", "pedestrian", "platform"
+                           ,"cycleway", "other", "living_street"))
+
+# network_reduced %>%
+#   saveRDS(here("data/gis/network_reduced_link_types.rds"))
+
+network_reduced_spatially = network_reduced %>%  
+  st_filter(counties_sa_buffer)
+
+network_reduced_spatially %>%
+  saveRDS(here("data/gis/network_reduced_link_types_spatial_portland.rds"))
+
+network_portland = network_reduced_spatially
+
+network_reduced_spatially %>%  nrow()
+
+network_df = network %>%  sample_n(100000) %>%  st_drop_geometry()
+
+network_df %>%  nrow()
+
+filter(highway %notin% c("footway", "residential","path", "unclassified", "platform"
+                         ,"service", "track", "pedestrian", "cycleway", "other", "living_street")
+                         
+                         ,"motorway_link", "primary_link", "trunk_link", "tertiary_link", "secondary_link"))
+
+network_df %>% 
+  pull(highway) %>%  
+  unique()
+
+tmp_network = network %>%  
+  st_filter(counties_sa_buffer)
+
+network_df %>%  
+  glimpse()
+
+#check 
+network %>%  sample_n(50000) %>%  mapview()
 
 mapview(network)
 
@@ -59,7 +123,6 @@ portland_buffer = data.frame(lon = -122.67720, lat = 45.5) %>%
 
 network_pb = network_sa %>%  
   st_filter(portland_buffer)
-
 
 
 network_pb %>%  
@@ -96,11 +159,6 @@ network_sa_cleaned = here("data/replica_20220801/gis/network_sa_cleaned.RDS") %>
   readRDS() %>%  
   mutate(stableEdgeId_adj = str_trunc(stableEdgeId, 14, "right", ellipsis = "") %>%  
            as.numeric()) 
-
-# network_sa_cleaned = here("data/replica_20220801/gis/network_sa_cleaned.RDS") %>% 
-#   readRDS() %>%  
-#   mutate(stableEdgeId_adj = str_trunc(stableEdgeId, 13, "right", ellipsis = "") %>%  
-#            as.numeric()) 
 
 network_link_volumes = read_csv_allFiles2(data_location = here("data/replica_20220801")
                    ,specifically = "network-link-volume", latest = F) %>%  
