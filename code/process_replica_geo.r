@@ -31,7 +31,6 @@ library(here)
 #content in this section should be removed if in production - ok for dev
 `%notin%` = Negate(`%in%`)
 
-
 #define focus area==============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #should be slightly bigger than your study area

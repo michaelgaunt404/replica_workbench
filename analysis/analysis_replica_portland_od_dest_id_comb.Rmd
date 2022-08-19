@@ -1,0 +1,239 @@
+---
+title: "ODs Survey for Route Identification"
+# date: "`r Sys.Date()`"
+# author: "Mike Gaunt \n michael.gaunt@wsp.com"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE, cache.lazy = FALSE, autodep = TRUE
+  ,warning = F,message = F, echo = F
+  ,dpi = 180,fig.width = 8, fig.height = 5
+  )
+```
+
+
+<!--#general comments===========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This is [[insert description here - what it does/solve]]
+#
+# By: mike gaunt, michael.gaunt@wsp.com
+#
+# README: [[insert brief readme here]]
+#-------- [[insert brief readme here]]
+#
+# *please use 80 character margins
+# *please go to https://pkgs.rstudio.com/flexdashboard/articles/layouts.html
+# to explore the different layouts available for the flexdashboard framework
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+
+<!--#library set-up=============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+```{r}
+library(tidyverse)
+library(here)
+library(gauntlet)
+library(data.table)
+library(mapview)
+```
+
+
+<!--#source helpers/utilities===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+<!--#source data================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev 
+#area to upload data with and to perform initial munging
+#please add test data here so that others may use/unit test these scripts -->
+
+
+```{r}
+org_agg_by_top_dest_sf = read_rds(here("data/geo_tracts_analysis_20220810/org_agg_by_top_dest_sf.rds"))
+
+od_basic_agg_byDest_sf = read_rds(here("data/geo_tracts_analysis_20220810/od_basic_agg_byDest_sf.rds"))
+
+dest_agg_by_top_org_sf = read_rds(here("data/geo_tracts_analysis_20220810/dest_agg_by_top_org_sf.rds"))
+
+od_basic_agg_byOrigin_sf = read_rds(here("data/geo_tracts_analysis_20220810/od_basic_agg_byOrigin_sf.rds"))
+
+selected_geoms = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms.RDS"))
+```
+
+
+<!-- #SECTION NAME=============================================================== -->
+<!-- #use this header to make demarcations/section in code [delete this line] -->
+<!-- #short description  -->
+
+
+# Top Trip Generator Analysis
+
+This page details which study area block groups are the top heavy freight trip generators (adjusted for block group land area). Only trips generated within the study area were used to perform this analysis - e.g. internal-external and internal-internal trips. The 90th percentile in trips generated adjusted for block group land area was used to filter the origin block group polys. The top trip generating block groups depicted in the left panel, the right panel depicts the top (90th percentile cutoff) destinations for these generators.
+
+## Column
+
+### Top Trip Emitting Block Groups
+
+```{r}
+od_basic_agg_byOrigin_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F)
+```
+
+## Column
+
+### Top Destination Block Groups by Top Emitters
+
+```{r}
+map = dest_agg_by_top_org_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F)
+
+map@map %>% 
+  leaflet::setView(lng = -122.6763
+                   ,lat = 45.51213
+                   ,zoom = 10)
+```
+
+# Top Trip Destination Analysis
+
+This page details which study area block groups are the top heavy freight trip destinations (adjusted for block group land area). Only trips that end within the study area were used to perform this analysis - e.g. external-internal and internal-internal trips. The 90th percentile in trips ending in and adjusted for block group land area was used to filter the destination block group polys. The top trip destination block groups are mapped in the left panel, the right panel depicts the top (90th percentile cutoff) trip generators for these destinations.
+
+## Column
+
+### Top Destination Block Groups
+
+```{r}
+od_basic_agg_byDest_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F)
+```
+
+## Column
+
+### Top Trip Emitting Block Groups by Top Destinations
+
+```{r}
+map = org_agg_by_top_dest_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F) 
+
+map@map %>% 
+  leaflet::setView(lng = -122.6763
+                   ,lat = 45.51213
+                   ,zoom = 10)
+```
+
+# Combined Analysis
+
+This page combines all previous analysis modules into one map. The map contains polygon layers for `Top Destinations`, `Top Destinations by Top Generators`, `Top Generators`, and `Top Generators by Top Destinations`. Each layer's polygons are colored using the same blue color, polygons with darker shades of blue indicate said polygons presence in multiple analysis modules, e.g. a polygon that is both a top trip generator and destination will appear darker as this polygon is layered over itself twice for both module layers.     
+
+Additionally, this map contains a layer titled `Candidate OD Poly Clusters`. This layer depicts hand drawn polygons which identify clusters of candidate OD polygons to use for the Replica Route Identification task.
+
+## Row
+
+```{r}
+
+data_object = rbind(
+  od_basic_agg_byDest_sf %>%  
+    mutate(source = "Top Destinations") %>%  
+    select(GEOID, contains("count"), source)
+  ,dest_agg_by_top_org_sf %>%  
+    mutate(source = "Top Destinations by Top Gen.") %>% 
+    select(GEOID, contains("count"), source)
+  ,od_basic_agg_byOrigin_sf %>%  
+    mutate(source = "Top Generators") %>% 
+    select(GEOID, contains("count"), source)
+  ,org_agg_by_top_dest_sf %>%  
+    mutate(source = "Top Generators by Top Dest.") %>% 
+    select(GEOID, contains("count"), source)
+) %>% 
+  filter(count_adj_area_rnk_bin >= .9) 
+
+colors = viridisLite::mako(4,alpha = .4)
+colors = rep("blue", 4)
+alpha = .2
+
+map = (data_object %>%  
+    filter(source == "Top Destinations") %>%  
+    mapview(layer.name = "Top Destinations"
+            ,col.regions = colors[1]
+            ,alpha.regions = alpha
+            ,homebutton = F)) +
+  (data_object %>%  
+     filter(source == "Top Destinations by Top Gen.") %>%  
+     mapview(layer.name = "Top Destinations by Top Gen." 
+             ,col.regions = colors[2]
+             ,alpha.regions = alpha
+             ,homebutton = F)) +
+  
+  (data_object %>%  
+     filter(source == "Top Generators") %>%  
+     mapview(layer.name = "Top Generators"
+             ,col.regions = colors[3]
+             ,alpha.regions = alpha
+             ,homebutton = F)) +
+  (data_object %>%  
+     filter(source == "Top Generators by Top Dest.") %>%  
+     mapview(layer.name = "Top Generators by Top Dest."
+             ,col.regions = colors[4]
+             ,alpha.regions = alpha
+             # ,alpha.regions = .2
+             ,homebutton = F))  + 
+  (selected_geoms$all %>%  
+     mapview(layer.name = "Candidate OD Poly Clusters"
+             ,col.regions = "orange"
+             ,alpha.regions = alpha
+             # ,alpha.regions = .2
+             ,homebutton = F))
+
+# 
+# what_we_created = map@map %>%  
+#   mapedit::editMap()
+# 
+# what_we_created$all %>%  mapview()
+# 
+# saveRDS(what_we_created
+#         ,here("data/geo_tracts_analysis_20220810/selected_geoms.RDS"))
+# 
+# yolo = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms.RDS"))
+# yolo$
+map@map %>%
+  leaflet::setView(lng = -122.6763
+                   ,lat = 45.51213
+                   ,zoom = 11)
+
+
+```
+
+<!-- ### Tab {.tabset} -->
+
+<!-- #### Origins -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- #### Destinations -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- ### {-} -->
+
+<!--end-->
