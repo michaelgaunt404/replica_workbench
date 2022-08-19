@@ -67,7 +67,7 @@ dest_agg_by_top_org_sf = read_rds(here("data/geo_tracts_analysis_20220810/dest_a
 
 od_basic_agg_byOrigin_sf = read_rds(here("data/geo_tracts_analysis_20220810/od_basic_agg_byOrigin_sf.rds"))
 
-selected_geoms = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms.RDS"))
+selected_geoms = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms_2.RDS"))
 ```
 
 
@@ -85,10 +85,15 @@ This page details which study area block groups are the top heavy freight trip g
 ### Top Trip Emitting Block Groups
 
 ```{r}
-od_basic_agg_byOrigin_sf %>%  
+map = od_basic_agg_byOrigin_sf %>%  
   filter(count_adj_area_rnk_bin >= .9) %>% 
   mapview(zcol = "count_adj_area_rnk_binc", burst = T
           ,layer.name = "origin_polys", homebutton = F)
+
+map@map %>% 
+  leaflet::setView(lng = -122.6763
+                   ,lat = 45.51213
+                   ,zoom = 10)
 ```
 
 ## Column
@@ -116,10 +121,15 @@ This page details which study area block groups are the top heavy freight trip d
 ### Top Destination Block Groups
 
 ```{r}
-od_basic_agg_byDest_sf %>%  
+map = od_basic_agg_byDest_sf %>%  
   filter(count_adj_area_rnk_bin >= .9) %>% 
   mapview(zcol = "count_adj_area_rnk_binc", burst = T
           ,layer.name = "origin_polys", homebutton = F)
+
+map@map %>% 
+  leaflet::setView(lng = -122.6763
+                   ,lat = 45.51213
+                   ,zoom = 10)
 ```
 
 ## Column
@@ -194,7 +204,7 @@ map = (data_object %>%
              ,alpha.regions = alpha
              # ,alpha.regions = .2
              ,homebutton = F))  + 
-  (selected_geoms$all %>%  
+  (selected_geoms %>%  
      mapview(layer.name = "Candidate OD Poly Clusters"
              ,col.regions = "orange"
              ,alpha.regions = alpha
@@ -202,22 +212,26 @@ map = (data_object %>%
              ,homebutton = F))
 
 # 
-# what_we_created = map@map %>%  
+# what_we_created_1 = map@map %>%
 #   mapedit::editMap()
 # 
 # what_we_created$all %>%  mapview()
 # 
-# saveRDS(what_we_created
-#         ,here("data/geo_tracts_analysis_20220810/selected_geoms.RDS"))
-# 
+# saveRDS(what_we_created_1
+#         ,here("data/geo_tracts_analysis_20220810/selected_geoms_2.RDS"))
+# # 
 # yolo = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms.RDS"))
 # yolo$
 map@map %>%
   leaflet::setView(lng = -122.6763
                    ,lat = 45.51213
-                   ,zoom = 11)
+                   ,zoom = 10)
 
-
+# rbind(yolo$all[-11,], what_we_created_1$all) %>%  mapview()
+# 
+# rbind(yolo$all[-11,], what_we_created_1$all) %>% 
+#   saveRDS(here("data/geo_tracts_analysis_20220810/selected_geoms_2.RDS"))
+  
 ```
 
 <!-- ### Tab {.tabset} -->
