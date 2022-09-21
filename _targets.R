@@ -9,7 +9,9 @@ library(targets)
 
 # Set target options:
 tar_option_set(
-  packages = c("tibble", "tidyverse", "sf", "tigris", "here", "DBI", "bigrquery"), # packages that your targets need to run
+  packages = c("tibble", "tidyverse", "sf", "tigris"
+               ,"here", "DBI", "bigrquery"
+               ,"crosstalk", "leaflet", "gauntlet"), # packages that your targets need to run
   format = "rds" # default storage format
   # Set other options as needed.
 ) 

@@ -34,11 +34,13 @@
 #please add test data here so that others may use/unit test these scripts
 
 
-#main header====================================================================
+#BigQuery Functions=============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 get_manual_cluster = function(file){
-  read_rds(file)
+  read_rds(file) %>% 
+    .$all %>% 
+    mutate(index_cluster = row_number())
 }
 
 get_block_groups = function(states = c("WA", "OR"), year = 2010){
@@ -86,15 +88,18 @@ get_block_groups_manual = function(){
 
 data_bg_clust = function(block_groups, clusters){
   bg_clust = block_groups %>%
-    st_join(clusters$all %>%  
-              mutate(index_cluster = dplyr::row_number() ))
+    st_join(clusters)
   
   bg_clust %>%
     filter(!is.na(X_leaflet_id)) 
   
 }
 
-query_trip_info = function(data){
+query_trip_info = function(query_trip_info){
+  
+  query_trip_info = tar_read("data_bg_clust")
+
+  data_bg_clust(data_block_group, data_manual_cluster))
   
   con <- dbConnect(
     bigrquery::bigquery(),
@@ -143,6 +148,7 @@ query_trip_info = function(data){
 }
 
 make_spatial_networks = function(data){
+  # data = tar_read("data_queried_trips")
   
   network = "data/gis/network_reduced_link_types_spatial_portland.rds" %>%  
     here() %>%  
@@ -161,6 +167,19 @@ make_spatial_networks = function(data){
   
   network_agg = link_unnest %>%  
     count(network_link_ids) 
+  
+  network_agg = link_unnest %>% 
+    mutate(count = 1) %>% 
+    count_percent_zscore(grp_c = c(network_link_ids, origin_cluster)
+                         ,grp_p = c(network_link_ids)
+                         ,col = count, rnd = 2) %>%  
+    group_by(network_link_ids) %>%  
+    mutate(count_tot = sum(count)) %>%  
+    arrange(origin_cluster) %>% 
+    select(!count) %>% 
+    mutate(origin_cluster = str_glue("% from Cluster: {origin_cluster}")) %>% 
+    pivot_wider(names_from = origin_cluster
+                ,values_from = percent) 
   
   list(network_agg_od = network_agg_od
        ,network_agg = network_agg) %>%  
