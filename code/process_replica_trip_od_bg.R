@@ -1,11 +1,18 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# This is script [[insert brief readme here]]
+# This script prepares data for OD selection for route identification
 #
 # By: mike gaunt, michael.gaunt@wsp.com
 #
-# README: [[insert brief readme here]]
-#-------- [[insert brief readme here]]
+# README: this script imports trip data from replica 
+#-------- sources polys from tigris 
+#-------- --need these for study area identification
+#-------- --need these to merge data with 
+#-------- should not be used for EDA 
+#-------- ideally this script should be sourced from RMD
+#-------- --RMD could provide folder locations and other inputs, etc
+#-------- --currently experiencing bug
+#-------- like to turn this into a canned report at somepoint
 #
 # *please use 80 character margins
 #
@@ -25,12 +32,9 @@ library(mapview)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #content in this section should be removed if in production - ok for dev
 
-#path set-up====================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#content in this section should be removed if in production - ok for dev
-
 #feeds into read_csv_allFiles2() below
 path_to_study_files = 'data/geo_tracts_analysis_20220810'
+
 
 ##folder dictionary----
 # 'data/geo_tracts_analysis_20220810' 
@@ -40,7 +44,14 @@ path_to_study_files = 'data/geo_tracts_analysis_20220810'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #content in this section should be removed if in production - ok for dev
 
+output_suffix = "mg_20220819"
+
+#cut off threshold for poly aggregation
+cut_off = .9
+
 options(tigris_use_cache = TRUE)
+
+##functions----
 
 create_neighbor_df = function(data = ods_filtered_neighbor
                               ,origin = T){
@@ -117,13 +128,8 @@ block_groups_raw = c("WA","OR") %>%
         st_transform(crs = 4326) %>%
         mutate(area_km2 = ALAND10/(1000^2))) %>%
   reduce(rbind) %>% 
-# block_groups_raw %>%  colnames()
-# block_groups_raw %>%
-#   rename_with(.fn = ~str_remove_all(.x, "[:digit:]"))
   rename(GEOID = GEOID10) %>%
   mutate(GEOID = as.numeric(GEOID))
-
-print("test23")
 
 ###tracts=======================================================================
 # tracts_raw = c("WA", "OR") %>%  
@@ -176,9 +182,8 @@ object_neighbors = object_codes_sa %>%
 
 ###trips==========================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-print("yolo")
-trips = read_csv_allFiles2("data/geo_tracts_analysis_20220810"
-                           ,specifically = "trips")
+trips = read_csv_allFiles2(path_to_study_files
+                           ,specifically = "trips_thursday_sep2019")
 
 trips = trips %>%  
   .[[1]]
@@ -192,12 +197,6 @@ trips_hc_agg_bg = trips_hc %>%
     ,by = .(origin_id = origin_bgrp
             ,destination_id = destination_bgrp)
     ]
-
-# trips_hc_agg = trips_hc %>%  
-#   .[,.(total_count_hc = .N)
-#     # ,by = .(origin_fips = origin_us_tract
-#     #         ,destination_fips = destination_us_tract)
-
 
 ###ODs==========================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -250,6 +249,9 @@ od_data_pro = od_data %>%
 
 
 #explore data===================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+##highlevel summary=============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 od_mat_int_ext_count_polys = od_data_pro %>%  
   count_percent_zscore(col = count
@@ -351,12 +353,11 @@ od_basic_agg_byOrigin_sf = od_basic_agg_byOrigin %>%
 
 
 od_basic_agg_byOrigin_sf %>%  
-  saveRDS(here("data/geo_tracts_analysis_20220810/od_basic_agg_byOrigin_sf.rds"))
+  saveRDS(here(str_glue("data/geo_tracts_analysis_20220810/org_agg_byOrigin_sf_{output_suffix}.rds")))
 
 ##get study polys===============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #this section should be in its own script since its is task specific
-cut_off = .9
 od_basic_agg_byOrigin_cut = od_basic_agg_byOrigin %>%  
   filter(count_adj_area_rnk_bin >= cut_off) 
 

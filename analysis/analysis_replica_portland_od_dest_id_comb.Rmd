@@ -46,7 +46,6 @@ library(data.table)
 library(mapview)
 ```
 
-
 <!--#source helpers/utilities===================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #content in this section should be removed if in production - ok for dev -->
@@ -67,7 +66,19 @@ dest_agg_by_top_org_sf = read_rds(here("data/geo_tracts_analysis_20220810/dest_a
 
 od_basic_agg_byOrigin_sf = read_rds(here("data/geo_tracts_analysis_20220810/od_basic_agg_byOrigin_sf.rds"))
 
-selected_geoms = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms_2.RDS"))
+selected_geoms = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms_4.RDS"))
+
+# selected_geoms %>%  mapview(zcol = "X_leaflet_id")
+# 
+# what_we_created_1
+# 
+# selected_geoms %>%  mapview(zcol = "X_leaflet_id")
+# rbind(
+# selected_geoms %>%  filter(X_leaflet_id != 14767),
+# what_we_created_1$all
+# ) %>% saveRDS(here("data/geo_tracts_analysis_20220810/selected_geoms_4.RDS"))
+#   
+#   mapview(zcol = "X_leaflet_id")
 ```
 
 
@@ -212,13 +223,13 @@ map = (data_object %>%
              ,homebutton = F))
 
 # 
-# what_we_created_1 = map@map %>%
+# what_we_created_2 = map@map %>%
 #   mapedit::editMap()
-# 
-# what_we_created$all %>%  mapview()
-# 
-# saveRDS(what_we_created_1
-#         ,here("data/geo_tracts_analysis_20220810/selected_geoms_2.RDS"))
+# # # 
+# what_we_created_2$all %>%  mapview()
+# # 
+# saveRDS(what_we_created_2
+#         ,here("data/geo_tracts_analysis_20220810/selected_geoms_5.RDS"))
 # # 
 # yolo = read_rds(here("data/geo_tracts_analysis_20220810/selected_geoms.RDS"))
 # yolo$
