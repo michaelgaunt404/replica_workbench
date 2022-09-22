@@ -1,14 +1,20 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
 block_groups|object|66aa2f67513dab8d|||||||||||||||
 clusters|object|1beb5cedec9a45ed|||||||||||||||
-data_bg_clust|stem|b17fa4f1ed3cc5eb|20ed89b18700ef60|98a1c59235efc8a9|-1183025063||t19256.7802773039s|15ff0f5fa8d97da6|74761|rds|local|vector|||0.28||
+data_bg_clust|stem|b17fa4f1ed3cc5eb|0259d449771e5c46|f7ffbba33568f0ee|-1183025063||t19256.9621627199s|15ff0f5fa8d97da6|74761|rds|local|vector|||0.27||
 data_block_group|stem|063276210488af62|afbced230b1807fe|86cbfb2a45be15c7|-1402914466||t19255.8636835248s|1dbe108f4e2f9a7d|190111|rds|local|vector|||4.19|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3|
+data_block_groups_sa|stem|72beda4e041af845|56bdcabe4e7e2171|034bcf60b734977a|495880096||t19256.8628602166s|4f8de742a936c874|32867123|rds|local|vector|||9.37|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package DBI was built under R version 4.1.3. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3|
+data_block_groups_selected_od|stem|063276210488af62|1704a6f3e65cf311|1a9b361e5b2955ff|-1040106888||t19256.8641529402s|1dbe108f4e2f9a7d|190111|rds|local|vector|||2.81|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package DBI was built under R version 4.1.3. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3|
 data_manual_cluster|stem|2f079876dfdecc8f|005926d0cbadcef7|545e94aab25a2a08|19270246||t19256.7802735767s|803138ea9597c2bb|2336|rds|local|vector|||0||
+data_processed_queries|stem|1439d0045d068fcd|315ff081fa3c8b3c|2655a5f2dfc3e0fe|1458061582||t19256.9642950084s|51746b56206030e8|7727671|rds|local|vector|||181.61||
 data_queried_trips|stem|32ddfd2c664d6ef1|d12a4f04f0b681b9|ef6db8c8783d9970|1140464235||t19255.9337040029s|9902846cc8368bd1|3434620|rds|local|vector|||309.23||
+data_queried_trips_2019|stem|8c30523288395e4b|325423f8c7da5b03|b8648ea054b3d5d4|-1538758778||t19256.9280008057s|e3f7f43b447f059f|3602710|rds|local|vector|||337.22||
+data_queried_trips_2021|stem|79885091db04bb79|9edd4cce595df18d|b8648ea054b3d5d4|785341894||t19256.9103949094s|df4d3f3c5924e1c5|3236386|rds|local|vector|||386.2||
 data_spatial_networks|stem|6bdac63eb021bb98|97b4fb51e04c9418|2026bca8cbc4f024|1833850275||t19256.7808211477s|442fd36d7179101e|4382929|rds|local|vector|||45.64||
 file_manual_cluster|stem|1597c5c820385c82|80047b8c2ab7b410|4e3739ef91745af0|499556823|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/geo_tracts_analysis_20220810/selected_geoms_5.RDS|t19255.7994184847s|4edeb070af104241|2478|file|local|vector|||4.69|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3|
-get_block_groups|function|487b8d5ccd5934bf|||||||||||||||
+get_block_groups|function|8159943efbca17e6|||||||||||||||
 get_block_groups_manual|function|390d22c46581dc6f|||||||||||||||
+get_block_groups_selected_od|function|390d22c46581dc6f|||||||||||||||
 get_manual_cluster|function|4348bdad7a876295|||||||||||||||
-make_spatial_networks|function|db68a11febbfd908|||||||||||||||
-query_trip_info|function|39c33e8c64daf49f|||||||||||||||
+make_spatial_networks|function|b3df92ed7eee35c0|||||||||||||||
+query_trip_info|function|29abf733b93b0b65|||||||||||||||

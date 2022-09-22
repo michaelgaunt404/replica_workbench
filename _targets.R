@@ -30,8 +30,17 @@ tar_source()
 list(
   tar_target(file_manual_cluster, here("data/geo_tracts_analysis_20220810/selected_geoms_5.RDS"), format = "file")
   ,tar_target(data_manual_cluster, get_manual_cluster(file_manual_cluster))
-  ,tar_target(data_block_group,  get_block_groups_manual())
-  ,tar_target(data_bg_clust, data_bg_clust(data_block_group, data_manual_cluster))
-  ,tar_target(data_queried_trips , query_trip_info(data_bg_clust))
-  ,tar_target(data_spatial_networks,  make_spatial_networks(data_queried_trips))
+  ,tar_target(data_block_groups_sa, get_block_groups())
+  ,tar_target(data_block_groups_selected_od,  get_block_groups_selected_od())
+  ,tar_target(data_bg_clust, data_bg_clust(data_block_groups_selected_od, data_manual_cluster))
+  ,tar_target(data_queried_trips_2019
+              ,query_trip_info(data_bgclust = data_bg_clust, data_bgsa = data_block_groups_sa
+                               ,schema_table = "northwest.northwest_2019_Q4_thursday_trip"))
+  ,tar_target(data_queried_trips_2021
+              ,query_trip_info(data_bgclust = data_bg_clust, data_bgsa = data_block_groups_sa
+                                ,schema_table = "northwest.northwest_2021_Q2_thursday_trip"))
+  ,tar_target(data_processed_queries,  make_spatial_networks(data_queried_trips_2019, data_queried_trips_2021))
 )
+
+
+

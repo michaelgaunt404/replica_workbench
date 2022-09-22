@@ -1,7 +1,7 @@
 
 
 
-data_spatial_networks_object = tar_read("data_spatial_networks")
+data_spatial_networks_object = tar_read("data_processed_queries")
 
 
 network_agg_od = data_spatial_networks$network_agg_od
@@ -48,58 +48,53 @@ bscols(widths = c(3, 9)
        )
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 cluster_object = tar_read("data_manual_cluster")
 
 network = data_spatial_networks_object
 data_spatial_networks
 
-network = tar_read("data_spatial_networks")
+data = tar_read("data_processed_queries")
 cluster_object = tar_read("data_manual_cluster")
 
 
 
+data_processed_queries
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-make_netowrk_map_od = function(network, cluster_object){
-  
-  cluster = cluster_object$all %>%  
-    mutate(index_cluster = row_number())
+make_netowrk_map_od = function(data, cluster_object){
   
   leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")
   
-  network_agg_od = network$network_agg_od
+  # cluster = cluster_object
+  
+  network_agg_od = data$network_agg_od
   
   network_agg_od_mp = network_agg_od %>%  
     st_true_midpoint()
@@ -107,16 +102,18 @@ make_netowrk_map_od = function(network, cluster_object){
   pal_centroids = colorNumeric(
     "Blues",
     network_agg_od_mp$n)
-  
-  network_agg_od_mp_sd = SharedData$new(network_agg_od_mp)
+
+    network_agg_od_mp_sd = SharedData$new(network_agg_od_mp)
   
   bscols(widths = c(3, 9)
          ,list(
-           crosstalk::filter_select("origin_cluster", "origin_cluster"
+           crosstalk::filter_select("dataset", "Choose Dataset: "
+                                     ,network_agg_od_mp_sd, ~dataset)
+           ,crosstalk::filter_select("origin_cluster", "Choose Origin Cluster:"
                                     ,network_agg_od_mp_sd, ~origin_cluster)
-           ,crosstalk::filter_select("destination_cluster", "destination_cluster"
+           ,crosstalk::filter_select("destination_cluster", "Choose Destination Cluster:"
                                      ,network_agg_od_mp_sd, ~destination_cluster)
-           ,crosstalk::filter_slider("n", "n"
+           ,crosstalk::filter_slider("n", "Link Count Slider:"
                                      ,network_agg_od_mp_sd, ~n)
          )
          ,leaflet(height = 800) %>% 
@@ -152,57 +149,40 @@ make_netowrk_map_od = function(network, cluster_object){
 
 make_netowrk_map_od = function(network, cluster_object){
   
-  cluster = cluster_object$all %>%  
-    mutate(index_cluster = row_number())
+  # cluster = cluster_object$all %>%  
+  #   mutate(index_cluster = row_number())
+  # 
+  # leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")
   
-  leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")
+  network_agg = data$network_agg
   
-  network_agg_od = network$network_agg_od
-  
-  network_agg = network_agg_od %>% 
-    st_drop_geometry() %>%  
-    count_percent_zscore(grp_c = c(stableEdgeId, origin_cluster)
-                         ,grp_p = c(stableEdgeId)
-                         ,col = n, rnd = 2) %>%  
-    arrange(origin_cluster) %>% 
-    mutate(origin_cluster = str_glue("From Cluster: {origin_cluster}")) %>% 
-    pivot_wider(names_from = origin_cluster
-                ,values_from = percent)
-  
-  network_centroids = network_agg_od %>%  
-    select(stableEdgeId, geometry) %>%  
-    unique() %>% 
+  network_agg_mp = network_agg %>%  
     st_true_midpoint()
-
-  network_centroids_agg_comb = network_centroids %>%  
-    merge(network_agg)
   
   pal_centroids = colorNumeric(
     "Blues",
-    network_links_agg_comb$count)
+    network_agg_mp$count_tot)
   
-  network_centroids_agg_comb_sd = SharedData$new(network_centroids_agg_comb)
+  network_agg_mp_sd = SharedData$new(network_agg_mp)
   
   bscols(widths = c(3, 9)
          ,list(
-           # crosstalk::filter_select("origin_cluster", "origin_cluster"
-           #                          ,network_links_agg_comb, ~origin_cluster)
-           # ,crosstalk::filter_select("destination_cluster", "destination_cluster"
-           #                           ,network_links_agg_comb, ~destination_cluster)
-           crosstalk::filter_slider("n", "n"
-                                     ,network_centroids_agg_comb_sd, ~count)
+           crosstalk::filter_select("dataset2", "Choose Dataset: "
+                                    ,network_agg_mp_sd, ~dataset)
+           ,crosstalk::filter_slider("n2", "Link Count Slider:"
+                                     ,network_agg_mp_sd, ~count_tot)
          )
          ,leaflet(height = 800) %>% 
            leaflet_default_tiles() %>% 
-           addCircleMarkers(data = network_centroids_agg_comb_sd
-                            ,fillColor = ~pal_centroids(network_centroids_agg_comb$count)
+           addCircleMarkers(data = network_agg_mp_sd
+                            ,fillColor = ~pal_centroids(network_agg_mp$count_tot)
                             ,color = "black"
                             ,opacity = .8
                             ,fillOpacity  = .5
                             ,weight = 1
                             ,radius = 5
                             ,group = "Network Links (mid-points)"
-                            ,label = network_centroids_agg_comb$count
+                            ,label = network_agg_mp$count_tot
                             ,labelOptions = labelOptions(noHide = F, textOnly = F)) %>% 
            addPolygons(data = cluster
                        ,color = "black"

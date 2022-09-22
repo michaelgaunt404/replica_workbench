@@ -112,8 +112,6 @@ showme_od_trips =  function(data_n, origin = T, thresh = .9, alpha = .4
 counties = tigris::counties(state = c("OR", "WA")) %>% 
   st_transform(4326)
 
-print("test")
-
 index_sa = counties %>%  
   filter(NAME %in% c("Multnomah", "Washington", "Clackamas")) %>%  
   pull(COUNTYFP)
@@ -187,6 +185,10 @@ trips = read_csv_allFiles2(path_to_study_files
 
 trips = trips %>%  
   .[[1]]
+
+# trips %>%  
+#   select(mode, travel_purpose, vehicle_type) %>%  
+#   unique()
 
 trips_hc = trips %>%  
   .[vehicle_type == "HEAVY_COMMERCIAL"] 
@@ -334,9 +336,10 @@ ods_agg_by_emit_rec_sf = ods_agg_by_emit_rec %>%
 #   geom_histogram(aes(total_count_diff_per ))
 
 
+#extract data for OD analysis===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-##counts by origin==============================================================
+##biggest origins===============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 od_basic_agg_byOrigin = od_data_pro %>%  
   filter(str_detect(flag_trip_type, "int_")) %>% 
@@ -355,7 +358,7 @@ od_basic_agg_byOrigin_sf = od_basic_agg_byOrigin %>%
 od_basic_agg_byOrigin_sf %>%  
   saveRDS(here(str_glue("data/geo_tracts_analysis_20220810/org_agg_byOrigin_sf_{output_suffix}.rds")))
 
-##get study polys===============================================================
+##destinations by biggest origins===============================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #this section should be in its own script since its is task specific
 od_basic_agg_byOrigin_cut = od_basic_agg_byOrigin %>%  
@@ -387,11 +390,7 @@ dest_agg_by_top_org_sf %>%
   saveRDS(here("data/geo_tracts_analysis_20220810/dest_agg_by_top_org_sf.rds"))
 
 
-
-
-
-
-##counts by destination==============================================================
+##biggest destinations===========================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 od_basic_agg_byDest = od_data_pro %>%  
   filter(str_detect(flag_trip_type, "_int")) %>% 
@@ -409,7 +408,7 @@ od_basic_agg_byDest_sf = od_basic_agg_byDest %>%
 od_basic_agg_byDest_sf %>%  
   saveRDS(here("data/geo_tracts_analysis_20220810/od_basic_agg_byDest_sf.rds"))
 
-##get study polys===============================================================
+##origins by biggest destinations===============================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #this section should be in its own script since its is task specific
 cut_off = .9
@@ -443,66 +442,7 @@ org_agg_by_top_dest_sf %>%
 
 
 
-
-
-
-
-
-
-
-
-# mapview(od_basic_agg_byOrigin_sf_cut
-#         ,zcol = "count_adj_area_rnk_binc"#, burst = T
-#         ,layer.name = "origin_polys", homebutton = F) +
-# mapview(dest_agg_by_top_org_sf_cut
-#         ,zcol = "count_adj_area_rnk_binc"#, burst = T
-#         ,layer.name = "destination_polys", homebuttoxn = F)
-
-
-#main header====================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-##sub header 1==================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-##sub header 2==================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 #script end=====================================================================
-
-
-#first get who emits the most number of trucks 
-#---> some percetnile of those?
-#order these ODs, get some percentage of those 
-
-
-
-
-
-
-
-# 
-# 
-# od_basic_agg_byOrigin %>%  
-#   arrange(count_adj_area ) %>%  
-#   mutate(index = row_number()) %>% 
-#   ggplot() + 
-#   geom_point(aes(index, count_adj_area ))
-# 
-# od_data_pro %>%  
-#   filter(str_detect(flag_trip_type, "int_")) %>% 
-#   arrange(origin_id, destination_id) %>% 
-#   ggplot() + 
-#   geom_point(aes(as.factor(origin_id)
-#                  ,as.factor(destination_id)
-#                  ,size = total_count_hc))
-
-
-
-
-
-
 
 
 
