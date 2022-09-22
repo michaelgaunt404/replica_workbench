@@ -1,0 +1,158 @@
+---
+title: "Route Identification ODs Survey"
+date: "`r Sys.Date()`"
+author: "Mike Gaunt \n michael.gaunt@wsp.com"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE, cache.lazy = FALSE, autodep = TRUE
+  ,warning = F,message = F, echo = F
+  ,dpi = 180,fig.width = 8, fig.height = 5
+  )
+```
+
+<!--#general comments===========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This is [[insert description here - what it does/solve]]
+#
+# By: mike gaunt, michael.gaunt@wsp.com
+#
+# README: [[insert brief readme here]]
+#-------- [[insert brief readme here]]
+#
+# *please use 80 character margins
+# *please go to https://pkgs.rstudio.com/flexdashboard/articles/layouts.html
+# to explore the different layouts available for the flexdashboard framework
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+<!--#library set-up=============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+```{r}
+library(tidyverse)
+library(here)
+library(gauntlet)
+library(data.table)
+library(mapview)
+```
+
+<!--#source helpers/utilities===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+<!--#source data================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev 
+#area to upload data with and to perform initial munging
+#please add test data here so that others may use/unit test these scripts -->
+```{r}
+dest_agg_by_top_org_sf = read_rds(here("data/geo_tracts_analysis_20220810/org_agg_by_top_dest_sf.rds"))
+
+od_basic_agg_byOrigin_sf = read_rds(here("data/geo_tracts_analysis_20220810/od_basic_agg_byDest_sf.rds"))
+```
+
+<!--#SECTION NAME===============================================================
+#use this header to make demarcations/section in code [delete this line]
+#short description -->
+
+Page 1
+=====================================
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Column 
+-------------------------------------
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+    
+### Origins BGroups
+    
+```{r}
+od_basic_agg_byOrigin_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F)
+```
+
+Column 
+-------------------------------------
+
+### Destination BGroups
+    
+```{r}
+dest_agg_by_top_org_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F)
+``` 
+
+*** 
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+
+
+Page 2 {data-orientation=rows}
+=====================================  
+   
+Row 
+-------------------------------------
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+
+Row 
+-------------------------------------
+
+<!-- Column  -->
+<!-- ------------------------------------- -->
+    
+### Origins BGroups
+    
+```{r}
+od_basic_agg_byOrigin_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F)
+```
+
+<!-- Column  -->
+<!-- ------------------------------------- -->
+
+### Destination BGroups
+    
+```{r}
+dest_agg_by_top_org_sf %>%  
+  filter(count_adj_area_rnk_bin >= .9) %>% 
+  mapview(zcol = "count_adj_area_rnk_binc", burst = T
+          ,layer.name = "origin_polys", homebutton = F)
+``` 
+
+<!-- ### Tab {.tabset} -->
+
+<!-- #### Origins -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- #### Destinations -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- ### {-} -->
+
+
+
+<!--end-->
+
+
+
+
+
+
