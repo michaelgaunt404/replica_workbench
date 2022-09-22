@@ -5,13 +5,15 @@
 
 # Load packages required to define the pipeline:
 library(targets)
-# library(tarchetypes) # Load other packages as needed. # nolint
+library(here)
+library(tarchetypes) # Load other packages as needed. # nolint
 
 # Set target options:
 tar_option_set(
   packages = c("tibble", "tidyverse", "sf", "tigris"
-               ,"here", "DBI", "bigrquery"
-               ,"crosstalk", "leaflet", "gauntlet"), # packages that your targets need to run
+               ,"here", "DBI", "bigrquery", "htmltools"
+               ,"crosstalk", "leaflet", "gauntlet"
+               ,"flexdashboard", "tarchetypes"), # packages that your targets need to run
   format = "rds" # default storage format
   # Set other options as needed.
 ) 
@@ -40,7 +42,10 @@ list(
               ,query_trip_info(data_bgclust = data_bg_clust, data_bgsa = data_block_groups_sa
                                 ,schema_table = "northwest.northwest_2021_Q2_thursday_trip"))
   ,tar_target(data_processed_queries,  make_spatial_networks(data_queried_trips_2019, data_queried_trips_2021))
+  ,tar_target(map_objects, make_network_maps(data_processed_queries, data_manual_cluster))
+  ,tar_render(dashboard_cluster_analysis, "index.rmd")
+  
+  
 )
-
 
 

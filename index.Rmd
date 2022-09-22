@@ -1,0 +1,121 @@
+---
+title: "Freight OD Cluster Analysis"
+# date: "`r Sys.Date()`"
+# author: "Mike Gaunt \n michael.gaunt@wsp.com"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE, cache.lazy = FALSE, autodep = TRUE
+  ,warning = F,message = F, echo = F
+  ,dpi = 180,fig.width = 8, fig.height = 5
+  )
+```
+
+
+<!--#general comments===========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This is [[insert description here - what it does/solve]]
+#
+# By: mike gaunt, michael.gaunt@wsp.com
+#
+# README: [[insert brief readme here]]
+#-------- [[insert brief readme here]]
+#
+# *please use 80 character margins
+# *please go to https://pkgs.rstudio.com/flexdashboard/articles/layouts.html
+# to explore the different layouts available for the flexdashboard framework
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+
+<!--#library set-up=============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+```{r}
+library(targets)
+# library(here)
+# library(gauntlet)
+# library(data.table)
+# library(mapview)
+```
+
+<!--#source helpers/utilities===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+<!--#source data================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev 
+#area to upload data with and to perform initial munging
+#please add test data here so that others may use/unit test these scripts -->
+
+
+```{r}
+map_objects = tar_read("map_objects")
+```
+
+
+<!-- #SECTION NAME=============================================================== -->
+<!-- #use this header to make demarcations/section in code [delete this line] -->
+<!-- #short description  -->
+
+
+# Top Trip Generator Analysis
+
+This page details which study area block groups are the top heavy freight trip generators (adjusted for block group land area). Only trips generated within the study area were used to perform this analysis - e.g. internal-external and internal-internal trips. The 90th percentile in trips generated adjusted for block group land area was used to filter the origin block group polys. The top trip generating block groups depicted in the left panel, the right panel depicts the top (90th percentile cutoff) destinations for these generators.
+
+## Column
+
+### Top Trip Emitting Block Groups
+
+```{r}
+map_objects[[2]]
+```
+
+
+# Top Trip Destination Analysis
+
+This page details which study area block groups are the top heavy freight trip destinations (adjusted for block group land area). Only trips that end within the study area were used to perform this analysis - e.g. external-internal and internal-internal trips. The 90th percentile in trips ending in and adjusted for block group land area was used to filter the destination block group polys. The top trip destination block groups are mapped in the left panel, the right panel depicts the top (90th percentile cutoff) trip generators for these destinations.
+
+## Column
+
+### Top Destination Block Groups
+
+```{r}
+
+```
+
+## Column
+
+### Top Trip Emitting Block Groups by Top Destinations
+
+```{r}
+
+```
+
+
+
+<!-- ### Tab {.tabset} -->
+
+<!-- #### Origins -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- #### Destinations -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- ### {-} -->
+
+<!--end-->
