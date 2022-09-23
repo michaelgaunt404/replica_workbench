@@ -317,7 +317,7 @@ make_network_maps = function(data, cluster_object){
                               c("Network Links (mid-points)", "OD Clusters"),
                             options = layersControlOptions(collapsed = F, sortLayers = F)) %>%  
                             setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
-                            leafem::addMouseCoordinates() %>%  
+                            addMouseCoordinates() %>%  
                             ###legends----
                           addLegend(
                             position = "bottomleft"
@@ -379,7 +379,7 @@ make_network_maps = function(data, cluster_object){
                            c("Network Links (mid-points)", "OD Clusters"),
                          options = layersControlOptions(collapsed = F, sortLayers = F)) %>%  
                          setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
-                         leafem::addMouseCoordinates() %>% 
+                         addMouseCoordinates() %>% 
                          ###legends----
                        addLegend(
                          position = "bottomleft"

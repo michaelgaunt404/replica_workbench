@@ -60,7 +60,7 @@ library(here)
 
 ```{r}
 # map_objects = tar_read(here("_targets/objects/map_objects")) 
-map_objects = tar_read("_targets/objects/map_objects")
+map_objects = tar_read("map_objects")
 ```
 
 
