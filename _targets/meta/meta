@@ -7,7 +7,7 @@ data_block_group|stem|063276210488af62|afbced230b1807fe|86cbfb2a45be15c7|-140291
 data_block_groups_sa|stem|72beda4e041af845|56bdcabe4e7e2171|034bcf60b734977a|495880096||t19256.8628602166s|4f8de742a936c874|32867123|rds|local|vector|||9.37|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package DBI was built under R version 4.1.3. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3|
 data_block_groups_selected_od|stem|063276210488af62|1704a6f3e65cf311|1a9b361e5b2955ff|-1040106888||t19256.8641529402s|1dbe108f4e2f9a7d|190111|rds|local|vector|||2.81|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package DBI was built under R version 4.1.3. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3|
 data_manual_cluster|stem|2f079876dfdecc8f|005926d0cbadcef7|545e94aab25a2a08|19270246||t19256.7802735767s|803138ea9597c2bb|2336|rds|local|vector|||0||
-data_processed_queries|stem|5755d66e4994fe79|315ff081fa3c8b3c|314b7297832aefb2|1458061582||t19261.9083398308s|89c4283ca1e82c0a|9146725|rds|local|vector|||182.37||
+data_processed_queries|stem|a3816c076f4b32bb|315ff081fa3c8b3c|37ff33b659af19fe|1458061582||t19262.6713519433s|cc4fb7107bc2d7c4|10266449|rds|local|vector|||187.93||
 data_queried_trips|stem|32ddfd2c664d6ef1|d12a4f04f0b681b9|ef6db8c8783d9970|1140464235||t19255.9337040029s|9902846cc8368bd1|3434620|rds|local|vector|||309.23||
 data_queried_trips_2019|stem|614a43eab2dd26af|325423f8c7da5b03|40042fe64d55ddd7|-1538758778||t19257.6714436418s|b710b10eba009cf2|10017907|rds|local|vector|||338.86||
 data_queried_trips_2021|stem|c36802cb8d52951d|9edd4cce595df18d|40042fe64d55ddd7|785341894||t19257.6988547808s|c5e68d7f9c361941|9972616|rds|local|vector|||380.52||
@@ -17,7 +17,7 @@ get_block_groups|function|8159943efbca17e6|||||||||||||||
 get_block_groups_manual|function|390d22c46581dc6f|||||||||||||||
 get_block_groups_selected_od|function|390d22c46581dc6f|||||||||||||||
 get_manual_cluster|function|4348bdad7a876295|||||||||||||||
-make_network_maps|function|5aa98d4b7eb7f715|||||||||||||||
-make_spatial_networks|function|70aea27dd6fbef4a|||||||||||||||
+make_network_maps|function|8ed0c7a23806d9f1|||||||||||||||
+make_spatial_networks|function|ba0963ccda0596d6|||||||||||||||
 map_objects|stem|3cc025f70a67753c|2f21856e1a2a1394|9ad3d02b36483402|-311258946||t19258.7236517509s|76a7a339a251086b|3498586|rds|local|vector|||71.49||
 query_trip_info|function|e11b214730240036|||||||||||||||

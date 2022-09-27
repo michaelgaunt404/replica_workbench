@@ -114,7 +114,7 @@ query_trip_info = function(data_bgclust, data_bgsa, schema_table){
   # schema_table = "northwest.northwest_2019_Q4_thursday_trip"
   # data_bgclust = tar_read("data_bg_clust")
   # data_bgsa = tar_read("data_block_groups_sa")
-
+  
   #connect to google
   con <- dbConnect(
     bigrquery::bigquery(),
@@ -130,7 +130,7 @@ query_trip_info = function(data_bgclust, data_bgsa, schema_table){
     select(GEOID, flag_sa) %>%
     merge(data_bg_clust_df, all = T) %>%  
     mutate(index_cluster = case_when(!is.na(index_cluster)~as.character(index_cluster)
-                     ,T~"External to Study Area")) %>% 
+                                     ,T~"External to Study Area")) %>% 
     filter(!(flag_sa == "internal" & is.na(X_leaflet_id))) 
   
   index_cluster = data_comb %>%  
@@ -138,7 +138,7 @@ query_trip_info = function(data_bgclust, data_bgsa, schema_table){
     pull(index_cluster) %>%  
     unique() %>%  
     sort()
-    
+  
   query_combinations = crossing(origin = index_cluster
                                 ,destination = index_cluster) %>%  
     filter(origin != destination) 
@@ -227,20 +227,22 @@ make_spatial_networks = function(data21, data19){
     filter(vehicle_type == "HEAVY_COMMERCIAL") %>% 
     select(activity_id, network_link_ids, origin_cluster, destination_cluster, dataset) %>%  
     unnest(cols = network_link_ids)
-
+  
   #create network data
   network_agg_od = link_unnest %>%
     # sample_n(1000) %>% 
     count(origin_cluster, destination_cluster, network_link_ids, dataset) %>%  
     merge(cluster_pair_xwalk) %>%  
     group_by(origin_cluster, destination_cluster) %>%  
-    mutate(pr_od = percent_rank(n)) %>%  
+    mutate(pr_od = percent_rank(n)
+           ,cp_od = (n/sum(n))*1000) %>%  
     ungroup() %>%  
     group_by(cluster_pair) %>%  
-    mutate(pr_od_pair = percent_rank(n)) %>%  
+    mutate(pr_od_pair = percent_rank(n)
+           ,cp_od_pair = (n/sum(n))*1000
+           ,cp_pr_od_pair = percent_rank(cp_od_pair)) %>%  
     ungroup()
-    
-    
+  
   network_agg = link_unnest %>% 
     mutate(count = 1) %>% 
     count_percent_zscore(grp_c = c(dataset, network_link_ids, origin_cluster)
@@ -255,12 +257,12 @@ make_spatial_networks = function(data21, data19){
                 ,values_from = percent)
   
   networks = list(network_agg_od = network_agg_od
-       ,network_agg = network_agg) %>%  
+                  ,network_agg = network_agg) %>%  
     map(~merge(network, .x
                ,by.x = "stableEdgeId", by.y = "network_link_ids", all.y = T) %>%  
           mutate(sf_geom_typ = st_geometry_type(geometry)) %>% 
           filter(sf_geom_typ == "LINESTRING")) 
-
+  
   
 }
 
@@ -271,161 +273,221 @@ make_network_maps = function(data, cluster_object){
   data = tar_read("data_processed_queries")
   cluster_object = tar_read("data_manual_cluster")
   
-  #global vars/objects 
-  
+  #global vars/objects
   leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")
   
-  cluster = cluster_object
+  cluster = cluster_object %>%  
+    mutate(index_cluster = as.factor(index_cluster))
+  
+  index_cluster_pair = c("1_2", "1_3", "1_4", "1_5", "1_6", "1_7", "1_8", "1_9", "1_10"  
+    ,"2_3", "2_4", "2_6", "2_7", "2_8", "2_9", "2_10"  
+    ,"3_4", "3_5", "3_6", "3_7", "3_8", "3_9", "3_10", "3_11", "3_12"
+    ,"4_5", "4_6", "4_7", "4_8", "4_9","4_10", "4_11", "4_12"  
+    ,"5_6", "5_7", "5_8", "5_9", "5_10", "5_11", "5_12"
+    ,"6_7", "6_8", "6_9", "6_10", "6_11", "6_12"  
+    ,"7_8", "7_9","7_10", "7_11", "7_12"  
+    ,"8_9","8_10", "8_11", "8_12"
+    ,"9_10", "9_11", "9_12"
+    ,"10_11", "10_12"
+    ,"11_12" )
+  
+  
   
   #OD map
   
   ##prepping data----
   
   network_agg_od = data$network_agg_od %>%  
-    mutate(across(c(origin_cluster, destination_cluster), as.numeric))
-
+    mutate(across(c(origin_cluster, destination_cluster), as.numeric)
+           ,cluster_pair = fct_relevel(cluster_pair
+                                       ,index_cluster_pair)
+           ,cp_pr_od_pair = dgt2(cp_pr_od_pair))
+  
+  # levels(network_agg_od$cluster_pair)
+  
   network_agg_od_mp = network_agg_od %>%  
     # sample_n(20000) %>%
-    select(origin_cluster, destination_cluster, cluster_pair, highway, n, pr_od, pr_od_pair, dataset) %>%  
-    rename(highway_class = highway, count = n
-           ,precent_rank_od = pr_od, precent_rank_od_pair = pr_od_pair, dataset = dataset) %>%  
+    select(origin_cluster, destination_cluster, cluster_pair, highway
+           # ,n, pr_od, pr_od_pair, dataset
+           ,n, pr_od, cp_od, pr_od_pair, cp_od_pair, cp_pr_od_pair, dataset
+    ) %>%  
+    rename(highway_class = highway, count = n, dataset = dataset
+           # ,precent_rank_od = pr_od, precent_rank_od_pair = pr_od_pair
+           ,precent_rank_od = pr_od, count_percent = cp_od
+           ,precent_rank_od_pair = pr_od_pair, count_percent_od = cp_od_pair, count_percent_od_pair = cp_pr_od_pair
+    ) %>%  
     mutate(dataset = gsub(".*(2019|2021)", "\\1", dataset)
-           ,across(starts_with("precent_rank"), dgt2)) %>% 
+           ,across(starts_with("precent"), dgt2)
+           ,label = str_glue(
+             "{cluster_pair} from {origin_cluster} <br> {count} - {precent_rank_od} - {precent_rank_od_pair}")
+           ,text = str_glue(
+             "Origin Pair: {cluster_pair} \n Origin Cluster: {origin_cluster} \n
+           Truck Count: {count} \n Percent Rank: {precent_rank_od} \n Percent Rank for OD Pair: {precent_rank_od_pair}")) %>% 
     st_true_midpoint()
   
   network_agg_od_mp_sm = network_agg_od_mp %>%  
-    filter(count> 3) %>%
-    sample_n(2000) 
+    filter(count> 3) 
   
-  network_agg_od_mp_sm$destination_cluster
-  network_agg_od_mp_sm$origin_cluster
-  
-    network_agg_od_mp_sd = SharedData$new(network_agg_od_mp_sm)
+  network_agg_od_mp_sd = SharedData$new(network_agg_od_mp_sm)
   
   ##make map----
   
   pal_centroids_od = colorNumeric(
     palette = "magma"
-    ,network_agg_od_mp$count
+    ,network_agg_od_mp_sm$count
     ,reverse = T)
   
-  map_network_od = bscols(widths = c(3, 9)
-                          ,list(
-                            crosstalk::filter_select("dataset", "Choose Dataset: "
-                                                     ,network_agg_od_mp_sd, ~dataset)
-                            ,crosstalk::filter_select("origin_cluster", "Choose Origin Cluster:"
-                                                      ,network_agg_od_mp_sd, ~origin_cluster)
-                            ,crosstalk::filter_select("destination_cluster", "Choose Destination Cluster:"
-                                                      ,network_agg_od_mp_sd, ~destination_cluster)
-                            # ,crosstalk::filter_select("cluster_pair", "Choose Origin Pairs:"
-                            #                           ,network_agg_od_mp_sd, ~cluster_pair)
-                            # ,crosstalk::filter_slider("count", "Link Count Slider:"
-                            #                           ,network_agg_od_mp_sd, ~count)
-                            # ,crosstalk::filter_slider("precent_rank_od ", "Truck Count Percent Rank:"
-                            #                           ,network_agg_od_mp_sd, ~precent_rank_od )
-                            # ,crosstalk::filter_slider("precent_rank_od_pair", "Truck Count Percent Rank (per OD pair):"
-                            #                           ,network_agg_od_mp_sd, ~precent_rank_od_pair)
-                          )
-                          ,leaflet(height = 800) %>% 
-                            leaflet_default_tiles() %>% 
-                            addCircleMarkers(data = network_agg_od_mp_sd
-                                             ,fillColor = ~pal_centroids_od(network_agg_od_mp$count)
-                                             ,color = "black"
-                                             ,opacity = .8
-                                             ,fillOpacity  = .5
-                                             ,weight = 1
-                                             ,radius = 5
-                                             ,group = "Network Links (mid-points)"
-                                             ,label = network_agg_od_mp$count
-                                             ,labelOptions = labelOptions(noHide = F, textOnly = F)) 
-                            # addPolygons(data = cluster
-                            #             ,color = "black"
-                            #             ,opacity = .8
-                            #             ,fillOpacity = .1
-                            #             ,weight = 1
-                            #             ,group = "OD Clusters"
-                            #             ,label = cluster$index_cluster) %>%  
-                            ##layer control----
-                          # addLayersControl(
-                          #   baseGroups = leaflet_default_tiles_index,
-                          #   overlayGroups =
-                          #     c("Network Links (mid-points)", "OD Clusters"),
-                          #   options = layersControlOptions(collapsed = F, sortLayers = F)) %>%  
-                          #   setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
-                          #   addMouseCoordinates() %>%  
-                            ###legends----
-                          # addLegend(
-                          #   position = "bottomleft"
-                          #   ,title = HTML("Link Truck Counts")
-                          #   ,group = "Network Links (mid-points)"
-                          #   ,pal = pal_centroids_od
-                          #   ,opacity = 0.7
-                          #   ,values = network_agg_od_mp$count)     
+  pal_clusters = colorFactor(
+    rev(viridisLite::viridis(option = "A", begin = .25, end = .75, direction = -1,
+                             length(levels(cluster$index_cluster)),
+    )),
+    cluster$index_cluster)
+  
+  # map_network_od = 
+  bscols(widths = c(3, 9)
+         ,list(
+           bscols(
+             widths = c(6, 6)
+             ,filter_select("dataset", "Choose Dataset: "
+                            ,network_agg_od_mp_sd, ~dataset)
+             ,filter_select("cluster_pair", "Choose Origin Pairs:"
+                            ,network_agg_od_mp_sd, ~cluster_pair))
+           ,bscols(
+             widths = c(6, 6)
+             ,filter_select("origin_cluster", "Origin Cluster:"
+                            ,network_agg_od_mp_sd, ~origin_cluster)
+             ,filter_select("destination_cluster", "Destination Cluster:"
+                            ,network_agg_od_mp_sd, ~destination_cluster))
+           ,HTML("Truck Count Filters") %>%  strong()
+           ,shiny::hr()
+           ,shiny::hr()
+           ,filter_slider("count", "Link Count Slider:"
+                          ,network_agg_od_mp_sd, ~count)
+           ,HTML("Truck Count Percent Rank per OD")
+           ,shiny::hr()
+           ,filter_slider("precent_rank_od", "Unidirectional:"
+                          ,network_agg_od_mp_sd, ~precent_rank_od)
+           ,filter_slider("precent_rank_od_pair", "Bidirectional:"
+                          ,network_agg_od_mp_sd, ~precent_rank_od_pair)
+           ,HTML("Link Percent of Total OD Pair Volume")
+           ,shiny::hr()
+           ,filter_slider("count_percent_od_pair", "Percent Rank (link count/total OD count):"
+                          ,network_agg_od_mp_sd, ~count_percent_od_pair)
+           # ,filter_slider("count_percent_od", "count_percent_od:"
+           #                ,network_agg_od_mp_sd, ~count_percent_od)
+         )
+         ,leaflet(height = 800) %>% 
+           leaflet_default_tiles() %>% 
+           addCircleMarkers(data = network_agg_od_mp_sd
+                            ,fillColor = ~pal_centroids_od(network_agg_od_mp_sm$count)
+                            ,color = "black"
+                            ,opacity = .8
+                            ,fillOpacity  = .5
+                            ,weight = 1
+                            ,radius = 5
+                            ,group = "Network Links (mid-points)"
+                            ,popup = popup_tbl_pretty(network_agg_od_mp_sm %>%
+                                                        select(!c(text, label)))
+                            ,label =
+                              network_agg_od_mp_sm$label %>%
+                              map(htmltools::HTML)
+                            ,labelOptions = labelOptions(noHide = F, textOnly = F)) %>% 
+           addPolygons(data = cluster
+                       ,fillColor = ~pal_clusters(cluster$index_cluster)
+                       ,opacity = .8
+                       ,fillOpacity = .4
+                       ,weight = 1
+                       ,group = "OD Clusters"
+                       ,label = cluster$index_cluster) %>%
+           #layer control----
+         addLayersControl(
+           baseGroups = leaflet_default_tiles_index,
+           overlayGroups =
+             c("Network Links (mid-points)", "OD Clusters"),
+           options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
+           setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
+           addMouseCoordinates() %>%
+           ##legends----
+         addLegend(
+           position = "bottomleft"
+           ,title = HTML("Link Truck Counts")
+           ,group = "Network Links (mid-points)"
+           ,pal = pal_centroids_od
+           ,opacity = 0.7
+           ,values = network_agg_od_mp$count) %>%  
+           addLegend(
+             position = "bottomleft"
+             ,title = HTML("OD Clusters")
+             ,group = "OD Clusters"
+             ,pal = pal_clusters
+             ,opacity = 0.7
+             ,values = cluster$index_cluster)
+         
+         
   )
   
   #total map----
   
   ##prepping data
-  
-  network_agg = data$network_agg
-  
-  network_agg_mp = network_agg %>%  
-    st_true_midpoint()
-  
-  network_agg_mp_sd = SharedData$new(network_agg_mp)
+  # network_agg = data$network_agg
+  # 
+  # network_agg_mp = network_agg %>%  
+  #   st_true_midpoint()
+  # 
+  # network_agg_mp_sd = SharedData$new(network_agg_mp)
   
   ##make map
   
-  pal_centroids_tot = colorNumeric(
-    palette = "magma"
-    ,network_agg_mp$count_tot
-    ,reverse = T)
-  
-  map_network = bscols(widths = c(3, 9)
-                       ,list(
-                         crosstalk::filter_select("dataset2", "Choose Dataset: "
-                                                  ,network_agg_mp_sd, ~dataset)
-                         ,crosstalk::filter_slider("n2", "Link Count Slider:"
-                                                   ,network_agg_mp_sd, ~count_tot)
-                       )
-                       ,leaflet(height = 800) %>% 
-                         leaflet_default_tiles() %>% 
-                         addCircleMarkers(data = network_agg_mp_sd
-                                          ,fillColor = ~pal_centroids_tot(network_agg_mp$count_tot)
-                                          ,color = "black"
-                                          ,opacity = .8
-                                          ,fillOpacity  = .5
-                                          ,weight = 1
-                                          ,radius = 5
-                                          ,group = "Network Links (mid-points)"
-                                          ,label = network_agg_mp$count_tot
-                                          ,labelOptions = labelOptions(noHide = F, textOnly = F)) %>% 
-                         addPolygons(data = cluster
-                                     ,color = "black"
-                                     ,opacity = .8
-                                     ,fillOpacity = .1
-                                     ,weight = 1
-                                     ,group = "OD Clusters"
-                                     ,label = cluster$index_cluster) %>%  
-                         ##layer control----
-                       addLayersControl(
-                         baseGroups = leaflet_default_tiles_index,
-                         overlayGroups =
-                           c("Network Links (mid-points)", "OD Clusters"),
-                         options = layersControlOptions(collapsed = F, sortLayers = F)) %>%  
-                         setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
-                         addMouseCoordinates() %>% 
-                         ###legends----
-                       addLegend(
-                         position = "bottomleft"
-                         ,title = HTML("Link Truck Counts")
-                         ,group = "Network Links (mid-points)"
-                         ,pal = pal_centroids_tot
-                         ,opacity = 0.7
-                         ,values = network_agg_mp$count_tot)     
-  )
-  
-  list(map_network_od, map_network)
+  # pal_centroids_tot = colorNumeric(
+  #   palette = "magma"
+  #   ,network_agg_mp$count_tot
+  #   ,reverse = T)
+  # 
+  # map_network = bscols(widths = c(3, 9)
+  #                      ,list(
+  #                        filter_select("dataset2", "Choose Dataset: "
+  #                                      ,network_agg_mp_sd, ~dataset)
+  #                        ,filter_slider("n2", "Link Count Slider:"
+  #                                       ,network_agg_mp_sd, ~count_tot)
+  #                      )
+  #                      ,leaflet(height = 800) %>% 
+  #                        leaflet_default_tiles() %>% 
+  #                        addCircleMarkers(data = network_agg_mp_sd
+  #                                         ,fillColor = ~pal_centroids_tot(network_agg_mp$count_tot)
+  #                                         ,color = "black"
+  #                                         ,opacity = .8
+  #                                         ,fillOpacity  = .5
+  #                                         ,weight = 1
+  #                                         ,radius = 5
+  #                                         ,group = "Network Links (mid-points)"
+  #                                         ,label = network_agg_mp$count_tot
+  #                                         ,labelOptions = labelOptions(noHide = F, textOnly = F)) %>% 
+  #                        addPolygons(data = cluster
+  #                                    ,color = "black"
+  #                                    ,opacity = .8
+  #                                    ,fillOpacity = .1
+  #                                    ,weight = 1
+  #                                    ,group = "OD Clusters"
+  #                                    ,label = cluster$index_cluster) %>%  
+  #                        ##layer control----
+  #                      addLayersControl(
+  #                        baseGroups = leaflet_default_tiles_index,
+  #                        overlayGroups =
+  #                          c("Network Links (mid-points)", "OD Clusters"),
+  #                        options = layersControlOptions(collapsed = F, sortLayers = F)) %>%  
+  #                        setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
+  #                        addMouseCoordinates() %>% 
+  #                        ###legends----
+  #                      addLegend(
+  #                        position = "bottomleft"
+  #                        ,title = HTML("Link Truck Counts")
+  #                        ,group = "Network Links (mid-points)"
+  #                        ,pal = pal_centroids_tot
+  #                        ,opacity = 0.7
+  #                        ,values = network_agg_mp$count_tot)     
+  # )
+  # 
+  # list(map_network_od, map_network)
   
 }
 
@@ -448,30 +510,43 @@ make_network_maps = function(data, cluster_object){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+addCircleMarkers(data = crash_links_sd
+                 ,fillColor = ~pal_crash_centroids(crash_links_points$collision_rate_comb_flg)
+                 ,color = "black"
+                 ,opacity = .8
+                 ,fillOpacity  = .8
+                 ,weight = 1
+                 ,group = "All Collisions (filterable points)<hr><strong>Combined Tier Layers:</strong>"
+                 ,popup = popup_tbl_pretty(crash_links_points %>%
+                                             select(!text))
+                 ,label =
+                   crash_links_points$text %>%
+                   map(htmltools::HTML)
+                 ,labelOptions = labelOptions(noHide = F, textOnly = F)
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
+                 
