@@ -11,9 +11,9 @@ library(tarchetypes) # Load other packages as needed. # nolint
 
 # Set target options:
 tar_option_set(
-  packages = c("tibble", "tidyverse", "sf", "tigris"
+  packages = c("tibble", "tidyverse", "sf", "tigris", "shiny"
                ,"here", "DBI", "bigrquery", "htmltools"
-               ,"crosstalk", "leaflet", "leafem", "gauntlet"
+               ,"crosstalk", "leaflet", "leafem", "gauntlet", "DT"
                ,"flexdashboard", "tarchetypes"), # packages that your targets need to run
   format = "rds" # default storage format
   # Set other options as needed.
@@ -45,6 +45,12 @@ list(
   ,tar_target(data_processed_queries,  make_spatial_networks(data_queried_trips_2019, data_queried_trips_2021))
   ,tar_target(map_objects, make_network_maps(data_processed_queries, data_manual_cluster))
   ,tar_render(dashboard_cluster_analysis, "index.rmd")
+  
+  #test targets---
+  ,tar_target(map_leaflet, test_leaflet())
+  ,tar_target(dt_datatable, test_datatable())
+  ,tar_target(map_crosstalk_leaflet, test_leaflet_providers())
+  
 )
 
 

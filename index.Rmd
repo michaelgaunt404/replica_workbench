@@ -1,12 +1,20 @@
 ---
-title: "Freight OD Cluster Analysis"
+# title: "Freight OD Cluster Analysis"
 # date: "`r Sys.Date()`"
 # author: "Mike Gaunt \n michael.gaunt@wsp.com"
-output: 
-  flexdashboard::flex_dashboard:
-    orientation: columns
-    vertical_layout: fill
+# output: 
+#   flexdashboard::flex_dashboard:
+#     orientation: columns
+#     vertical_layout: fill
 ---
+
+<style type="text/css">
+.main-container {
+  max-width: 95vw;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -50,12 +58,19 @@ library(targets)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #content in this section should be removed if in production - ok for dev -->
 
+```{js}
+function filter_default() {
+    document.getElementById("dataset").getElementsByClassName("selectized")[0].selectize.setValue("2021_Q2_thursday_trip", false);
+}
+window.onload = filter_default;
+```
+
+
 <!--#source data================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #content in this section should be removed if in production - ok for dev 
 #area to upload data with and to perform initial munging
 #please add test data here so that others may use/unit test these scripts -->
-
 
 ```{r}
 map_objects = tar_read("map_objects")
@@ -66,39 +81,10 @@ map_objects = tar_read("map_objects")
 <!-- #use this header to make demarcations/section in code [delete this line] -->
 <!-- #short description  -->
 
-
-# Top Trip Generator Analysis
-
-This page details which study area block groups are the top heavy freight trip generators (adjusted for block group land area). Only trips generated within the study area were used to perform this analysis - e.g. internal-external and internal-internal trips. The 90th percentile in trips generated adjusted for block group land area was used to filter the origin block group polys. The top trip generating block groups depicted in the left panel, the right panel depicts the top (90th percentile cutoff) destinations for these generators.
-
-## Column
-
-### Top Trip Emitting Block Groups
-
 ```{r}
-map_objects[[2]]
+map_objects
 ```
 
-
-# Top Trip Destination Analysis
-
-This page details which study area block groups are the top heavy freight trip destinations (adjusted for block group land area). Only trips that end within the study area were used to perform this analysis - e.g. external-internal and internal-internal trips. The 90th percentile in trips ending in and adjusted for block group land area was used to filter the destination block group polys. The top trip destination block groups are mapped in the left panel, the right panel depicts the top (90th percentile cutoff) trip generators for these destinations.
-
-## Column
-
-### Top Destination Block Groups
-
-```{r}
-
-```
-
-## Column
-
-### Top Trip Emitting Block Groups by Top Destinations
-
-```{r}
-
-```
 
 
 

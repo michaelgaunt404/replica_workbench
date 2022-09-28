@@ -270,8 +270,8 @@ make_spatial_networks = function(data21, data19){
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 make_network_maps = function(data, cluster_object){
-  data = tar_read("data_processed_queries")
-  cluster_object = tar_read("data_manual_cluster")
+  # data = tar_read("data_processed_queries")
+  # cluster_object = tar_read("data_manual_cluster")
   
   #global vars/objects
   leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")
@@ -360,7 +360,7 @@ make_network_maps = function(data, cluster_object){
                             ,network_agg_od_mp_sd, ~destination_cluster))
            ,HTML("Truck Count Filters") %>%  strong()
            ,shiny::hr()
-           ,shiny::hr()
+           # ,shiny::hr()
            ,filter_slider("count", "Link Count Slider:"
                           ,network_agg_od_mp_sd, ~count)
            ,HTML("Truck Count Percent Rank per OD")
@@ -376,8 +376,9 @@ make_network_maps = function(data, cluster_object){
            # ,filter_slider("count_percent_od", "count_percent_od:"
            #                ,network_agg_od_mp_sd, ~count_percent_od)
          )
-         ,leaflet(height = 800) %>% 
-           leaflet_default_tiles() %>% 
+         ,leaflet(height = 700) %>% 
+           addTiles(group = "OSM (default)") %>% 
+           # leaflet_default_tiles() %>% 
            addCircleMarkers(data = network_agg_od_mp_sd
                             ,fillColor = ~pal_centroids_od(network_agg_od_mp_sm$count)
                             ,color = "black"
@@ -401,7 +402,7 @@ make_network_maps = function(data, cluster_object){
                        ,label = cluster$index_cluster) %>%
            #layer control----
          addLayersControl(
-           baseGroups = leaflet_default_tiles_index,
+           baseGroups = "OSM (default)", #leaflet_default_tiles_index,
            overlayGroups =
              c("Network Links (mid-points)", "OD Clusters"),
            options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
@@ -506,28 +507,6 @@ make_network_maps = function(data, cluster_object){
 
 
 
-
-
-
-
-addCircleMarkers(data = crash_links_sd
-                 ,fillColor = ~pal_crash_centroids(crash_links_points$collision_rate_comb_flg)
-                 ,color = "black"
-                 ,opacity = .8
-                 ,fillOpacity  = .8
-                 ,weight = 1
-                 ,group = "All Collisions (filterable points)<hr><strong>Combined Tier Layers:</strong>"
-                 ,popup = popup_tbl_pretty(crash_links_points %>%
-                                             select(!text))
-                 ,label =
-                   crash_links_points$text %>%
-                   map(htmltools::HTML)
-                 ,labelOptions = labelOptions(noHide = F, textOnly = F)
-                 
-                 
-                 
-                 
-                 
                  
                  
                  
