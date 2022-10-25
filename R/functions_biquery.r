@@ -361,18 +361,18 @@ make_network_maps = function(data, cluster_object){
            ,HTML("Truck Count Filters") %>%  strong()
            ,shiny::hr()
            # ,shiny::hr()
-           ,filter_slider("count", "Link Count Slider:"
+           ,filter_slider("count", "Truck Counts per link per OD Pair:"
                           ,network_agg_od_mp_sd, ~count)
-           ,HTML("Truck Count Percent Rank per OD")
-           ,shiny::hr()
-           ,filter_slider("precent_rank_od", "Unidirectional:"
+           # ,HTML("Truck Count Percent Rank per OD")
+           # ,shiny::hr()
+           ,filter_slider("precent_rank_od", "Truck Counts Percent Rank (per unidirectional OD Pair):"
                           ,network_agg_od_mp_sd, ~precent_rank_od)
-           ,filter_slider("precent_rank_od_pair", "Bidirectional:"
-                          ,network_agg_od_mp_sd, ~precent_rank_od_pair)
-           ,HTML("Link Percent of Total OD Pair Volume")
-           ,shiny::hr()
-           ,filter_slider("count_percent_od_pair", "Percent Rank (link count/total OD count):"
-                          ,network_agg_od_mp_sd, ~count_percent_od_pair)
+           # ,filter_slider("precent_rank_od_pair", "Bidirectional:"
+           #                ,network_agg_od_mp_sd, ~precent_rank_od_pair)
+           # ,HTML("Link Percent of Total OD Pair Volume")
+           # ,shiny::hr()
+           # ,filter_slider("count_percent_od_pair", "Percent Rank (link count/total OD count):"
+           #                ,network_agg_od_mp_sd, ~count_percent_od_pair)
            # ,filter_slider("count_percent_od", "count_percent_od:"
            #                ,network_agg_od_mp_sd, ~count_percent_od)
          )
