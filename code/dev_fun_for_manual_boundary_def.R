@@ -6,6 +6,12 @@ library(leaflet)
 library(mapedit)
 library(tidyverse)
 
+
+
+
+
+
+
 input_bg_year = 2010 
 
 states = states() %>%  

@@ -269,9 +269,10 @@ make_spatial_networks = function(data21, data19){
 ##Mapping Functions=============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-make_network_maps = function(data, cluster_object){
-  # data = tar_read("data_processed_queries")
-  # cluster_object = tar_read("data_manual_cluster")
+make_network_map_ = function(network_objects){
+  # network_objects = tar_read('mem_data_trip')
+  
+  network_objects
   
   #global vars/objects
   leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")

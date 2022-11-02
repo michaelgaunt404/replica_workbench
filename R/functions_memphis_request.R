@@ -33,20 +33,71 @@
 #area to upload data with and to perform initial munging
 #please add test data here so that others may use/unit test these scripts
 
-
-#BigQuery Data Functions========================================================
+#functions======================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+#data prep and query============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+query_poi_to_everything = function(data, db_connection, schema_table, limit = 25){
+  
+  limit_query = ifelse(is.na(limit), ";", str_glue("limit {limit};"))
+  
+  poly_query_df = data %>%  
+    st_drop_geometry() %>% 
+    filter(flag_poi == "poi") %>%  
+    select(group, id) 
+  
+  message("Begin query..")
+  queried_data = poly_query_df$group %>%  
+    unique() %>%  
+    map(~{
+      
+      message(.x)
+      
+      query_focus_id = poly_query_df %>%  
+        filter(group == .x) %>%  
+        pull(id) %>% 
+        paste0("'", ., "'") %>% 
+        paste(collapse = ", ") 
+      
+      query_string = str_glue("SELECT * FROM
+  `{schema_table}`
+ WHERE start_taz IN ({query_focus_id}) AND mode = 'COMMERCIAL' {limit_query}")
+      
+      message(query_string)
+      
+      temp_data = dbGetQuery(db_connection, query_string)
+      
+      message(nrow(temp_data))
+      
+      temp_data %>% 
+        mutate(queried_group = .x
+               ,queried_poi = query_focus_id
+               ,dataset = schema_table)
+      
+    })
+  
+  queried_data
+}
 
-library(DBI)
-library(bigrquery)
+query_poi_to_everything_safe = purrr::safely(query_poi_to_everything)
 
+purrr_get_safe_results = function(object, type = "result"){
+  object %>%
+    map(~.x[[type]])
+  }
 
-data = read_rds(here("data", "memphis_req/processed_taz_for_query.rds"))
-
-function(data, schema_table){
+query_replica = function(data, schema_table, limit = 50){
   # schema_table = "south_central.south_central_2019_Q4_thursday_trip"
+  # schema_table = "wsp.south_central_2021_Q4_thursday_trip_taz"
   # data = read_rds(here("data", "memphis_req/processed_taz_for_query.rds"))
+  # data = here("data/memphis_req/data_for_query"
+  #             ,"split_taz_polys_pro_comb_20221031.shp") %>%
+  #   read_sf()
+  
+  # browser()
+  
+  data_pro = read_sf(data)
   
   con <- dbConnect(
     bigrquery::bigquery(),
@@ -54,38 +105,466 @@ function(data, schema_table){
     dataset = schema_table
   )
   
-  poly_external = data %>% filter(flag_sa == "external") %>%  
-    pull(id)
-  poly_internal = data %>% filter(flag_sa == "internal") %>%  
-    pull(id)
-  poly_query_df = data %>% filter(flag_sa == "internal" & flag_terminal == "terminal") %>%  
-    rename(group = terminal_name) %>%  
-    select(group, id) %>%  
-    st_drop_geometry()
+  # message(con)
+  
+  queried_data =  query_poi_to_everything_safe(data = data_pro
+                                               ,db_connection = con
+                                               ,schema_table = schema_table
+                                               ,limit = limit)  %>% 
+   .[["result"]] %>%  
+    reduce(bind_rows)
+ 
+  queried_data
+  
+}
+
+get_replica_network = function(query_data, schema_table, limit = 25
+                               ,street_type_exclude = c("path", "other", "track", "service","pedestrian", "unclassified"
+                                                        ,"living_street","cycleway","proposed ", "trunk",  "footway"
+                                                        ,"construction ","abandoned ","platform")){
+  street_type_exclude_pro = street_type_exclude %>%  
+    paste0("'", .,"'", collapse = ",") 
+  
+  bbox = query_data %>%  
+    sf::st_bbox()
   
   
-  x = "UP - Marion IMX" 
+  limit_query = ifelse(is.na(limit), ";", str_glue("limit {limit};"))
   
-  poly_query$group %>%  
-    unique() %>%  
-    map(~{
-      query_focus_id = poly_query_df %>%  
-        filter(group == x) %>%  
-        pull(id)
-      
-      query_rest_id = poly_internal[!(poly_internal %in% query_focus_id)]
-      
-      
-      query_string = str_glue("SELECT * FROM
+  query_string = str_glue("SELECT * FROM
   `{schema_table}`
- WHERE origin_bgrp IN ({query_focus_id}) AND destination_bgrp IN ({destination_bg}) AND mode = 'COMMERCIAL' --LIMIT 20
-                              ;")
-      
-      
-      
-    })
+ WHERE ((startLon > {bbox$xmin} AND startLon < {bbox$xmax}) AND
+ (endLon > {bbox$xmin} AND endLon < {bbox$xmax})) AND
+  ((startLat > {bbox$ymin} AND startLat < {bbox$ymax}) AND
+  (endLat > {bbox$ymin} AND endLat < {bbox$ymax})) AND
+  highway NOT IN ({street_type_exclude_pro}) {limit_query}")
+  
+  temp_query_gis = dbGetQuery(con, 
+                              query_string)
+  
+  sf::st_as_sf(temp_query_gis, wkt = "geometry", crs = 4326) %>%  
+    st_filter(query_data)
+}
+
+make_spatial_networks = function(network, data, query_poly, rm_self = T){
+  # data = tar_read("data_queried_trips")
+  # data21 = tar_read("data_queried_trips_2021")
+  # data19 = tar_read("data_queried_trips_2019")
+  # query_poly = data_gis
+  # network = network_memphis
+  
+  message("Preping data...")
+  
+  query_poly_df = query_poly %>%  
+    read_sf() %>% 
+    st_drop_geometry() %>%  
+    filter(flag_poi == "poi") %>%  
+    rename(start_taz_group = group)
+  
+  network_pro = network %>%  
+    read_sf() %>% 
+    mutate(stableEdgeId_trunc = str_trunc(stableEdgeId, 14, "right", ""))
+  
+  data_pro = data %>%  
+    mutate(count = 1) %>% 
+    select(c('dataset', 'activity_id', 'start_taz'
+             ,'end_taz', 'vehicle_type', 'network_link_ids', 'count')) %>% 
+    {if (rm_self) (.) %>%  filter(start_taz != end_taz) else .} %>% 
+    merge(., query_poly_df %>%
+            select(id, start_taz_group)  
+          ,by.x = "start_taz", by.y = "id") 
+  
+  link_unnest = data_pro %>%  
+    unnest(cols = network_link_ids) %>% 
+    mutate(network_link_ids_trunc = str_trunc(network_link_ids, 14, "right", "")) 
+  
+  message("Perfroming aggregations...")
+  
+  #agg by network link
+  agg_network_link = link_unnest %>%  
+    count_percent_zscore(
+      grp_c = c('dataset', 'network_link_ids_trunc')
+      ,grp_p = c('dataset', 'network_link_ids_trunc')
+      ,col = count)
+  
+  #agg by network link
+  agg_network_link_type = link_unnest %>%  
+    count_percent_zscore(
+      grp_c = c('dataset', 'network_link_ids_trunc', 'vehicle_type')
+      ,grp_p = c('dataset', 'network_link_ids_trunc')
+      ,col = count)
+  
+  #agg by network link
+  agg_network_link_type_origin = link_unnest %>%  
+    count_percent_zscore(
+      grp_c = c('dataset', 'start_taz', 'start_taz_group', 'network_link_ids_trunc', 'vehicle_type')
+      ,grp_p = c('dataset', 'start_taz', 'start_taz_group', 'network_link_ids_trunc')
+      ,col = count)
+  
+  #agg by network link
+  # agg_od = link_unnest %>%  
+  #   count_percent_zscore(
+  #     grp_c = c('dataset', 'start_taz', 'start_taz_group', 'end_taz', 'vehicle_type')
+  #     ,grp_p = c('dataset', 'start_taz', 'start_taz_group', 'end_taz')
+  #     ,col = count)
+  
+  message("Merging networks...")
+  
+  network_merged = list(agg_network_link = agg_network_link
+                        ,agg_network_link_type = agg_network_link_type
+                        ,agg_network_link_type_origin = agg_network_link_type_origin
+  ) %>%  
+    map(~merge(network_pro 
+               ,.x 
+               ,by.x = "stableEdgeId_trunc", by.y = "network_link_ids_trunc", all = T) %>%  
+          mutate(sf_geom_typ = st_geometry_type(geometry)) %>% 
+          filter(sf_geom_typ == "LINESTRING")) 
+  
+  return(network_merged)
+  
+}
+
+
+
+#map functions==================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+make_network_map_anl = function(network_objects, file_query_poly){
+  # network_objects = tar_read('mem_data_network_objects')
+  # file_query_poly = tar_read("mem_query_poly")
+   
+  query_poly = file_query_poly %>%  
+    read_sf() %>%  
+    mutate(across(c(starts_with("flag"), group), as.factor))
+  
+  net_anl = network_objects$agg_network_link %>%  
+    filter(!is.na(count) & !is.na(startLon)) %>% 
+    mutate(flag_NHS = case_when((str_detect(streetName, "^US") |
+                                   str_detect(streetName, "^I"))~streetName
+                     ,T~NA_character_)) %>% 
+    mutate(label = str_glue("Network Link: {streetName} <br> Type: {highway} <br> Link Volume {count}"))
+  
+  net_anl_cntrd = net_anl %>%  
+    gauntlet::st_true_midpoint()
+  
+  #global vars/objects
+  leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")
+  
+  #OD map
+
+  ##prepping data----
+
+  net_anl_cntrd_sd = SharedData$new(net_anl_cntrd)
+
+  ##make map----
+
+  pal_centroids_od = colorNumeric(
+    palette = "magma"
+    ,net_anl_cntrd$count
+    ,reverse = T)
+
+  pal_group = colorFactor(
+    rev(viridisLite::viridis(option = "A", begin = .25, end = .75, direction = 1,
+                             length(levels(query_poly$flag_poi)),
+    )),
+    query_poly$flag_poi)
+
+  bscols(widths = c(3, 9)
+         ,list(
+           filter_select("net_anl_cntrd_sd_dataset", "Choose Dataset:"
+                         ,net_anl_cntrd_sd, ~dataset)
+           ,filter_select("net_anl_cntrd_sd_flag_NHS", "Choose Specific Rdwy:"
+                          ,net_anl_cntrd_sd, ~flag_NHS)
+           ,bscols(
+             widths = c(12)
+             ,filter_select("net_anl_cntrd_sd_highway", "Choose Street Type:"
+                            ,net_anl_cntrd_sd, ~highway)
+           )
+           ,HTML("Truck Count Filters") %>%  strong()
+           ,shiny::hr()
+           ,filter_slider("net_anl_cntrd_sd_count", "Trip Count:"
+                          ,net_anl_cntrd_sd, ~count)
+           ,filter_slider("net_anl_cntrd_sd_countlg10", "Trip Count (log10):"
+                          ,net_anl_cntrd_sd, ~dgt2(log10(count)))
+         )
+         ,leaflet(height = 700) %>%
+           addTiles(group = "OSM (default)") %>%
+           # leaflet_default_tiles() %>%
+           addCircleMarkers(data = net_anl_cntrd_sd
+                            ,fillColor = ~pal_centroids_od(net_anl_cntrd$count)
+                            ,color = "black"
+                            ,opacity = .8
+                            ,fillOpacity  = .5
+                            ,weight = 1
+                            ,radius = 5
+                            ,group = "Network Links (mid-points)"
+                            # ,popup = popup_tbl_pretty(network_agg_od_mp_sm %>%
+                            #                             select(!c(text, label)))
+                            ,label =
+                              net_anl_cntrd$label %>%
+                              map(htmltools::HTML)
+                            # ,labelOptions = labelOptions(noHide = F, textOnly = F)
+                            ) %>%
+           addPolygons(data = query_poly
+                       ,fillColor = ~pal_group(query_poly$flag_poi)
+                       ,opacity = .4
+                       ,fillOpacity = .4
+                       ,weight = 1
+                       ,group = "Origin Poly Groups"
+                       ,label = query_poly$group) %>%
+           #layer control----
+         addLayersControl(
+           baseGroups = "OSM (default)", #leaflet_default_tiles_index,
+           overlayGroups =
+             c("Network Links (mid-points)", "Origin Poly Groups"),
+           options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
+           # setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
+           addMouseCoordinates() %>%
+           ##legends----
+         addLegend(
+           position = "bottomleft"
+           ,title = HTML("Link Truck Counts")
+           ,group = "Network Links (mid-points)"
+           ,pal = pal_centroids_od
+           ,opacity = 0.7
+           ,values = net_anl_cntrd$count) %>% 
+           addLegend(
+             position = "bottomright"
+             ,title = HTML("Poly Groups")
+             ,group = "Origin Poly Groups"
+             ,pal = pal_group
+             ,opacity = 0.7
+             ,values = query_poly$flag_poi)
+         )
+
+}
+
+make_network_map_anlt = function(network_objects, file_query_poly){
+  # network_objects = tar_read('mem_data_network_objects')
+  # file_query_poly = tar_read("mem_query_poly")
+  
+  query_poly = file_query_poly %>%  
+    read_sf() %>%  
+    mutate(across(c(starts_with("flag"), group), as.factor))
+  
+  net_anlt = network_objects$agg_network_link_type %>%  
+    filter(!is.na(count) & !is.na(startLon)) %>% 
+    mutate(flag_NHS = case_when((str_detect(streetName, "^US") |
+                                   str_detect(streetName, "^I"))~streetName
+                                ,T~NA_character_)) %>% 
+    mutate(label = str_glue("Network Link: {streetName} <br> Type: {highway} <br> Vehicle: Type {vehicle_type} <br> Link Volume {count}"))
+  
+  net_anlt_cntrd = net_anlt %>%  
+    gauntlet::st_true_midpoint()
+  
+  #global vars/objects
+  leaflet_default_tiles_index =  c("OSM (default)", "Esri", "CartoDB")
+  
+  #OD map
+  
+  ##prepping data----
+  
+  net_anlt_cntrd_sd = SharedData$new(net_anlt_cntrd)
+  
+  ##make map----
+  
+  pal_centroids_od = colorNumeric(
+    palette = "magma"
+    ,net_anlt_cntrd$count
+    ,reverse = T)
+  
+  pal_group = colorFactor(
+    rev(viridisLite::viridis(option = "A", begin = .25, end = .75, direction = 1,
+                             length(levels(query_poly$flag_poi)),
+    )),
+    query_poly$flag_poi)
+  
+  bscols(widths = c(3, 9)
+         ,list(
+           filter_select("net_anlt_cntrd_sd_dataset", "Choose Dataset:"
+                         ,net_anlt_cntrd_sd, ~dataset)
+           ,filter_select("net_anlt_cntrd_sd_flag_NHS", "Choose Specific Rdwy:"
+                          ,net_anlt_cntrd_sd, ~flag_NHS)
+           ,bscols(
+             widths = c(6, 6)
+             ,filter_select("net_anlt_cntrd_sd_highway", "Choose Street Type:"
+                            ,net_anlt_cntrd_sd, ~highway)
+             ,filter_select("net_anlt_cntrd_sd_vehicle_type", "Choose Vehicle Type:"
+                            ,net_anlt_cntrd_sd, ~vehicle_type)
+           )
+           ,HTML("Truck Count Filters") %>%  strong()
+           ,shiny::hr()
+           ,filter_slider("net_anlt_cntrd_sd_count", "Trip Count:"
+                          ,net_anlt_cntrd_sd, ~count)
+           ,filter_slider("net_anlt_cntrd_sd_countlg10", "Trip Count (log10):"
+                          ,net_anlt_cntrd_sd, ~dgt2(log10(count)))
+         )
+         ,leaflet(height = 700) %>%
+           addTiles(group = "OSM (default)") %>%
+           # leaflet_default_tiles() %>%
+           addCircleMarkers(data = net_anlt_cntrd_sd
+                            ,fillColor = ~pal_centroids_od(net_anlt_cntrd$count)
+                            ,color = "black"
+                            ,opacity = .8
+                            ,fillOpacity  = .5
+                            ,weight = 1
+                            ,radius = 5
+                            ,group = "Network Links (mid-points)"
+                            # ,popup = popup_tbl_pretty(network_agg_od_mp_sm %>%
+                            #                             select(!c(text, label)))
+                            ,label =
+                              net_anlt_cntrd$label %>%
+                              map(htmltools::HTML)
+                            # ,labelOptions = labelOptions(noHide = F, textOnly = F)
+           ) %>%
+           addPolygons(data = query_poly
+                       ,fillColor = ~pal_group(query_poly$flag_poi)
+                       ,opacity = .4
+                       ,fillOpacity = .4
+                       ,weight = 1
+                       ,group = "Origin Poly Groups"
+                       ,label = query_poly$group) %>%
+           #layer control----
+         addLayersControl(
+           baseGroups = "OSM (default)", #leaflet_default_tiles_index,
+           overlayGroups =
+             c("Network Links (mid-points)", "Origin Poly Groups"),
+           options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
+           # setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
+           addMouseCoordinates() %>%
+           ##legends----
+         addLegend(
+           position = "bottomleft"
+           ,title = HTML("Link Truck Counts")
+           ,group = "Network Links (mid-points)"
+           ,pal = pal_centroids_od
+           ,opacity = 0.7
+           ,values = net_anlt_cntrd$count) %>% 
+           addLegend(
+             position = "bottomright"
+             ,title = HTML("Poly Groups")
+             ,group = "Origin Poly Groups"
+             ,pal = pal_group
+             ,opacity = 0.7
+             ,values = query_poly$flag_poi)
+  )
+  
+}
+
+make_network_map_anlto = function(network_objects, file_query_poly){
+  # network_objects = tar_read('mem_data_network_objects')
+  # file_query_poly = tar_read("mem_query_poly")
+  
+  #global vars/objects~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  leaflet_default_tiles_index = c("OSM (default)", "Esri", "CartoDB")
+  
+  #prep poi polygons~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  query_poly = file_query_poly %>%  
+    read_sf() %>%  
+    mutate(across(c(starts_with("flag"), group), as.factor))
+  
+  query_poly_poi = query_poly %>%  
+    filter(flag_poi == "poi")
+  
+  query_poly_nonpoi = query_poly %>%  
+    filter(flag_poi != "poi")
   
   
+  map_elemet_poi = function(base_map){
+    base_map %>%  
+      addPolygons(data = query_poly_poi
+                  ,fillColor = "blue",fillOpacity = .2
+                  ,color = "black", opacity = .4,weight = 1
+                  ,group = "POI Polygons", label = query_poly_poi$group) %>% 
+      addPolygons(data = query_poly_nonpoi
+                  ,fillColor = "tan"
+                  ,opacity = .2,fillOpacity = .2,weight = 1
+                  ,group = "Non-POI Study Area Polygons")
+  }
+  
+  
+  #prep data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  net_anlto = network_objects$agg_network_link_type_origin %>%  
+    filter(!is.na(count) & !is.na(startLon)) %>% 
+    mutate(flag_NHS = case_when((str_detect(streetName, "^US") |
+                                   str_detect(streetName, "^I"))~streetName
+                                ,T~NA_character_)) %>% 
+    mutate(label = str_glue("Origin Group: {start_taz_group} <br> Network Link: {streetName} <br> Type: {highway} <br> Vehicle: Type {vehicle_type} <br> Link Volume {count}"))
+  
+  net_anlto_cntrd = net_anlto %>%  
+    gauntlet::st_true_midpoint()
+  
+  net_anlto_cntrd_sd = SharedData$new(net_anlto_cntrd)
+  
+  pal_centroids_od = colorNumeric(
+    palette = "magma"
+    ,net_anlto_cntrd$count
+    ,reverse = T)
+  
+  #make map~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  bscols(widths = c(3, 9)
+         ,list(
+           filter_select("net_anlto_cntrd_sd_dataset", "Choose Dataset:"
+                         ,net_anlto_cntrd_sd, ~dataset)
+           ,filter_select("net_anlto_cntrd_sd_flag_NHS", "Choose Specific Rdwy:"
+                          ,net_anlto_cntrd_sd, ~flag_NHS)
+           ,bscols(
+             widths = c(6, 6)
+             ,filter_select("net_anlto_cntrd_sd_highway", "Choose Street Type:"
+                            ,net_anlto_cntrd_sd, ~highway)
+             ,filter_select("net_anlto_cntrd_sd_vehicle_type", "Choose Vehicle Type:"
+                            ,net_anlto_cntrd_sd, ~vehicle_type)
+           )
+           ,filter_select("net_anlto_cntrd_sd_grp", "Choose Specific Rdwy:"
+                          ,net_anlto_cntrd_sd, ~start_taz_group)
+           ,HTML("Truck Count Filters") %>%  strong()
+           ,shiny::hr()
+           ,filter_slider("net_anlto_cntrd_sd_count", "Trip Count:"
+                          ,net_anlto_cntrd_sd, ~count)
+           ,filter_slider("net_anlto_cntrd_sd_countlg10", "Trip Count (log10):"
+                          ,net_anlto_cntrd_sd, ~dgt2(log10(count)))
+         )
+         ,leaflet(height = 700) %>%
+           addTiles(group = "OSM (default)") %>%
+           leaflet_default_tiles() %>%
+           addCircleMarkers(data = net_anlto_cntrd_sd
+                            ,fillColor = ~pal_centroids_od(net_anlto_cntrd$count)
+                            ,color = "black"
+                            ,opacity = .8
+                            ,fillOpacity  = .5
+                            ,weight = 1
+                            ,radius = 5
+                            ,group = "Network Links (mid-points)"
+                            # ,popup = popup_tbl_pretty(network_agg_od_mp_sm %>%
+                            #                             select(!c(text, label)))
+                            ,label =
+                              net_anlto_cntrd$label %>%
+                              map(htmltools::HTML)
+                            # ,labelOptions = labelOptions(noHide = F, textOnly = F)
+           ) %>%
+           map_elemet_poi() %>% 
+           #layer control----
+         addLayersControl(
+           baseGroups = leaflet_default_tiles_index
+           ,overlayGroups =
+             c("Network Links (mid-points)"
+               ,"POI Polygons", "Non-POI Study Area Polygons")
+           ,options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
+           addMouseCoordinates() %>%
+           ##legends----
+         addLegend(
+           position = "bottomleft"
+           ,title = HTML("Link Truck Counts")
+           ,group = "Network Links (mid-points)"
+           ,pal = pal_centroids_od
+           ,opacity = 0.7
+           ,values = net_anlto_cntrd$count) %>% 
+           
+  )
+
 }
 
 
@@ -94,163 +573,91 @@ function(data, schema_table){
 
 
 
-# 
-# query_trip_info2 = function(data_bgclust, data_bgsa, schema_table){
-#   
-#   schema_table = "northwest.northwest_2019_Q4_thursday_trip"
-#   data_bgclust = tar_read("data_bg_clust")
-#   data_bgsa = tar_read("data_block_groups_sa")
-# 
-#   #connect to google
-#   con <- dbConnect(
-#     bigrquery::bigquery(),
-#     project = "replica-customer",
-#     dataset = schema_table
-#   )
-#   
-#   #query prep
-#   data_bg_clust_df = data_bgclust %>%  
-#     st_drop_geometry()
-#   
-#   data_comb = data_bgsa %>%  
-#     select(GEOID, flag_sa) %>%
-#     merge(data_bg_clust_df, all = T) %>%  
-#     mutate(index_cluster = case_when(!is.na(index_cluster)~as.character(index_cluster)
-#                                      ,T~"External to Study Area")) %>% 
-#     filter(!(flag_sa == "internal" & is.na(X_leaflet_id))) 
-#   
-#   index_cluster = data_comb %>%  
-#     filter(index_cluster != "External to Study Area") %>% 
-#     pull(index_cluster) %>%  
-#     unique() %>%  
-#     sort()
-#   
-#   query_combinations = crossing(origin = index_cluster
-#                                 ,destination = index_cluster) %>%  
-#     filter(origin != destination) 
-#   
-#   # %>%  
-#   #   filter((origin == "1" | origin == "External to Study Area") & 
-#   #            (destination == "1" | destination == "External to Study Area"))
-#   # x = query_combinations$origin[1]
-#   # y = query_combinations$destination[1]
-#   
-#   
-#   query_strings = list(query_combinations$origin #%>% sample(2)
-#                        ,query_combinations$destination #%>% sample(2)
-#   ) %>% 
-#     pmap(~{
-#       
-#       origin_bg = data_comb %>%  
-#         filter(index_cluster == .x) %>%  
-#         pull(GEOID) %>% 
-#         paste0("'", ., "'") %>% 
-#         paste(collapse = ", ")
-#       
-#       destination_bg = data_comb %>%  
-#         filter(index_cluster == .y) %>%  
-#         pull(GEOID) %>%  
-#         paste0("'", ., "'") %>% 
-#         paste(collapse = ", ")
-#       
-#       query_string = str_glue("SELECT * FROM
-#   `{schema_table}`
-#  WHERE origin_bgrp IN ({origin_bg}) AND destination_bgrp IN ({destination_bg}) AND mode = 'COMMERCIAL' --LIMIT 20
-#                               ;")
-#       
-#       queried_data =  dbGetQuery(con, query_string) %>%  
-#         mutate(origin_cluster = .x
-#                ,destination_cluster = .y
-#                ,dataset = schema_table)
-#       
-#     })
-# }
 
-# make_spatial_networks = function(data21, data19){
-#   # data = tar_read("data_queried_trips")
-#   # data21 = tar_read("data_queried_trips_2021")
-#   # data19 = tar_read("data_queried_trips_2019")
-#   
-#   #get network
-#   network = "data/gis/network_reduced_link_types_spatial_portland.rds" %>%  
-#     here() %>%  
-#     read_rds() 
-#   
-#   #reduce and combine data
-#   data_queried_trips_comb = list(data21
-#                                  ,data19) %>%  
-#     map(~reduce(.x, bind_rows)) %>% 
-#     reduce(bind_rows) %>% 
-#     mutate(across(c(origin_cluster, destination_cluster), as.numeric))
-#   
-#   #this should be a an input or at least and option to do so 
-#   data_queried_trips_comb_hc = data_queried_trips_comb %>%  
-#     filter(vehicle_type == "HEAVY_COMMERCIAL") 
-#   
-#   #aggregation for OD matrix
-#   trips_agg_od = data_queried_trips_comb_hc %>%  
-#     count(origin_cluster, destination_cluster, dataset) %>%  
-#     data.frame()
-#   
-#   cluster_pair_xwalk = trips_agg_od %>%  
-#     select(ends_with("cluster")) %>%  
-#     unique() %>%  
-#     mutate(index = row_number()
-#            ,) %>% 
-#     pivot_longer(cols = ends_with("cluster")) %>%  
-#     mutate(value_duplicate = value) %>%  
-#     arrange(index, value_duplicate) %>% 
-#     group_by(index) %>% 
-#     mutate(cluster_pair = str_glue("{value_duplicate}_{lead(value_duplicate)}")
-#            ,cluster_pair = case_when(str_detect(cluster_pair, "_NA")~lag(cluster_pair),T~cluster_pair)) %>%  
-#     ungroup() %>% 
-#     arrange(index ) %>%  
-#     select(!value_duplicate) %>% 
-#     pivot_wider(names_from = "name", values_from = "value") %>%  
-#     select(contains("cluster"))
-#   
-#   link_unnest = data_queried_trips_comb %>%  
-#     filter(vehicle_type == "HEAVY_COMMERCIAL") %>% 
-#     select(activity_id, network_link_ids, origin_cluster, destination_cluster, dataset) %>%  
-#     unnest(cols = network_link_ids)
-#   
-#   #create network data
-#   network_agg_od = link_unnest %>%
-#     # sample_n(1000) %>% 
-#     count(origin_cluster, destination_cluster, network_link_ids, dataset) %>%  
-#     merge(cluster_pair_xwalk) %>%  
-#     group_by(origin_cluster, destination_cluster) %>%  
-#     mutate(pr_od = percent_rank(n)
-#            ,cp_od = (n/sum(n))*1000) %>%  
-#     ungroup() %>%  
-#     group_by(cluster_pair) %>%  
-#     mutate(pr_od_pair = percent_rank(n)
-#            ,cp_od_pair = (n/sum(n))*1000
-#            ,cp_pr_od_pair = percent_rank(cp_od_pair)) %>%  
-#     ungroup()
-#   
-#   network_agg = link_unnest %>% 
-#     mutate(count = 1) %>% 
-#     count_percent_zscore(grp_c = c(dataset, network_link_ids, origin_cluster)
-#                          ,grp_p = c(dataset, network_link_ids)
-#                          ,col = count, rnd = 2) %>%  
-#     group_by(dataset, network_link_ids) %>%  
-#     mutate(count_tot = sum(count)) %>%  
-#     arrange(origin_cluster) %>% 
-#     select(!count) %>% 
-#     mutate(origin_cluster = str_glue("% from Cluster: {origin_cluster}")) %>% 
-#     pivot_wider(names_from = origin_cluster
-#                 ,values_from = percent)
-#   
-#   networks = list(network_agg_od = network_agg_od
-#                   ,network_agg = network_agg) %>%  
-#     map(~merge(network, .x
-#                ,by.x = "stableEdgeId", by.y = "network_link_ids", all.y = T) %>%  
-#           mutate(sf_geom_typ = st_geometry_type(geometry)) %>% 
-#           filter(sf_geom_typ == "LINESTRING")) 
-#   
-#   
-# }
+
+
+
+
+
+
+
+# #getting the data===============================================================
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 
+# ##get trips=====================================================================
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# temp_2 = here("data/memphis_req/data_for_query","split_taz_polys_pro_comb_20221031.shp") %>% read_sf()
+# schema_table_2 = "wsp.south_central_2021_Q4_thursday_trip_taz"
+# queried_data_2 = query_replica(temp_2, schema_table_2, limit = 5000)
+# data = queried_data_2
+# saveRDS(queried_data_2, 
+#         here("data/memphis_req/data_queried", "memphis_request_trip_20221101.rds"))
+# 
+# ##get network===================================================================
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# data_gis = here("data/memphis_req/data_for_query", "split_taz_polys_pro_comb_20221031.shp") %>%
+#   read_sf()
+# schema_table = "south_central.south_central_2021_Q4_network_segments"
+# # 
+# network_memphis = get_replica_network(
+#   data_gis
+#   ,schema_table
+#   ,limit = NA
+# )
+# 
+# here("data/memphis_req/data_queried", "network_memphis_pro_20221101.gpkg") %>%  
+#   write_sf(network_memphis, .)
+# 
+# network_mem = here("data/memphis_req/data_queried", "network_memphis_pro_20221101.gpkg") %>%  
+#   read_sf(.)
+# # network = network_memphis
+# 
+# ##get network===================================================================
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 
+# test = make_spatial_networks(
+#   network = network_mem
+#   ,data = queried_data_2
+#   ,query_poly = temp_2
+# )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##Mapping Functions=============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
