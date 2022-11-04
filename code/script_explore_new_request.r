@@ -187,47 +187,46 @@ taz_comb %>%
 
 test = read_sf(here("data/memphis_req/split_taz_polys/split_taz_polys.shp"))
 
-
-
 ##load saved data===============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #section used to load current saved data 
-split_taz_polys = read_sf(here("data/memphis_req/split_taz_polys/split_taz_polys.shp"))
-
-split_taz_polys %>% 
-  mutate(flag_f = case_when(str_detect(id, "\\.")~T, T~F)) %>% 
-  mapview(zcol = "flag_f")
-
-mem_taz_sm = mem_taz %>%  st_filter(split_taz_polys)
-mem_bg_sm = mem_bg %>%  st_filter(split_taz_polys)
-
-mem_bg %>%  
-  filter(id %in% c("471570223211")) %>% 
-  mapview(col.regions = "blue") + 
-  mapview(mem_taz_sm, col.regions = "red")
-mem_bg_sm = mem_bg %>%  st_filter(split_taz_polys)
+#for exploration purposes not to build data 
+# split_taz_polys = read_sf(here("data/memphis_req/split_taz_polys/split_taz_polys.shp"))
+# 
+# split_taz_polys %>% 
+#   mutate(flag_f = case_when(str_detect(id, "\\.")~T, T~F)) %>% 
+#   mapview(zcol = "flag_f")
+# 
+# mem_taz_sm = mem_taz %>%  st_filter(split_taz_polys)
+# mem_bg_sm = mem_bg %>%  st_filter(split_taz_polys)
+# 
+# mem_bg %>%  
+#   filter(id %in% c("471570223211")) %>% 
+#   mapview(col.regions = "blue") + 
+#   mapview(mem_taz_sm, col.regions = "red")
+# mem_bg_sm = mem_bg %>%  st_filter(split_taz_polys)
 
 ##make query data===============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-###grab previous polys==========================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 split_taz_polys = read_sf(here("data/memphis_req/split_taz_polys/split_taz_polys.shp"))
 
-pro_taz_for_query = read_rds(here("data", "memphis_req/processed_taz_for_query.rds")) %>%  
+###grab UN-split poi polys======================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#these polys are the POI polys that did not need to be split
+pro_taz_for_query = read_rds(here("data/memphis_req/data_for_query"
+                                  ,"processed_taz_for_query.rds")) %>%  
   filter(flag_terminal != "not a terminal") %>%  
   mutate(flag_poi = "poi"
          ,group = terminal_name
          ,id = as.character(id)) %>%  
   select(id, geometry, group, flag_sa, flag_poi)
 
-
 ###grab split poi polys=========================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #section used to load current saved data 
-split_taz_polys %>% 
-  mutate(flag_f = case_when(str_detect(id, "\\.")~T, T~F)) %>% 
-  mapview(zcol = "flag_f")
+# split_taz_polys %>% 
+#   mutate(flag_f = case_when(str_detect(id, "\\.")~T, T~F)) %>% 
+#   mapview(zcol = "flag_f")
 
 split_taz_polys_poi = split_taz_polys %>% 
   filter(str_detect(id, "\\."))  %>%  
@@ -238,26 +237,28 @@ split_taz_polys_poi = split_taz_polys %>%
     ,str_detect(id,"4715700000333.2")~"BNSF - Memphis (Shelby) IMX"
     ,str_detect(id,"2803300000717.2")~"FedEx Ground (Nail rd)"
     ,str_detect(id,"4715700000380.2")~"FedEx Freight (Mem.)"
-    ,T~"no_id"
+    ,T~"no_group_id"
       )) %>%  
   mutate(flag_sa = "internal"
-         ,flag_poi = case_when(group == "no_id"~"not_poi",T~"poi")) 
+         ,flag_poi = case_when(group == "no_group_id"~"not_poi",T~"poi")) 
 
 ###clean sa polys===============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#need to add port of memphis polys manually 
 split_taz_polys_pro_lg = split_taz_polys %>%  
   select(id) %>% 
-  filter(!(id %in% split_taz_polys_pro$id)) %>% 
+  filter(!(id %in% split_taz_polys_poi$id)) %>% 
   filter(!(id %in% pro_taz_for_query$id)) %>% 
   mutate(flag_sa = "internal"
          ,flag_poi = "not_poi") %>%  
   mutate(group = case_when((str_detect(id,"0503500000025") |
-             str_detect(id,"0503500000034") |
-             str_detect(id,"0503500000012") |
-             str_detect(id,"0503500000027") |
-             str_detect(id,"0503500000028") |
-             str_detect(id,"0503500000014"))~"Port of West Memphis"
-             ,T~"no_id"))
+                              str_detect(id,"0503500000034") |
+                              str_detect(id,"0503500000012") |
+                              str_detect(id,"0503500000027") |
+                              str_detect(id,"0503500000028") |
+                              str_detect(id,"0503500000014"))~"Port of West Memphis"
+                           ,T~"no_group_id")) %>% 
+  mutate(flag_poi = case_when(group == "Port of West Memphis"~"poi", T~flag_poi))
 
 ###combine and save out=========================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -265,16 +266,19 @@ split_taz_polys_pro_comb = split_taz_polys_pro_lg %>%
   rbind(split_taz_polys_poi) %>% 
   rbind(pro_taz_for_query)
 
-# split_taz_polys_pro_comb %>% 
-#   mapview(zcol = "group", burst = T)
+# split_taz_polys_pro_comb %>%
+#   mapview(zcol = "group")
 
+clean_date = function(){
+  Sys.Date() %>%  
+    gsub("-", "\\1", .)
+}
 
-here("data/memphis_req/data_for_query"
-     ,"split_taz_polys_pro_comb_20221031.shp") %>% 
+str_glue("split_taz_polys_pro_comb_{clean_date()}.shp") %>% 
+  here("data/memphis_req/data_for_query", .) %>% 
   write_sf(split_taz_polys_pro_comb, .)   
 
   
-
 #analysis: automated query======================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #makes objects used for automated query 

@@ -1,0 +1,105 @@
+---
+# title: "Freight OD Cluster Analysis"
+# date: "`r Sys.Date()`"
+# author: "Mike Gaunt \n michael.gaunt@wsp.com"
+# output: 
+#   flexdashboard::flex_dashboard:
+#     orientation: columns
+#     vertical_layout: fill
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 95vw;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE, cache.lazy = FALSE, autodep = TRUE
+  ,warning = F,message = F, echo = F
+  ,dpi = 180,fig.width = 8, fig.height = 5
+  )
+```
+
+
+<!--#general comments===========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This is [[insert description here - what it does/solve]]
+#
+# By: mike gaunt, michael.gaunt@wsp.com
+#
+# README: [[insert brief readme here]]
+#-------- [[insert brief readme here]]
+#
+# *please use 80 character margins
+# *please go to https://pkgs.rstudio.com/flexdashboard/articles/layouts.html
+# to explore the different layouts available for the flexdashboard framework
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+
+<!--#library set-up=============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+```{r}
+library(targets)
+```
+
+<!--#source helpers/utilities===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+```{js}
+<!-- function filter_default() { -->
+<!--     document.getElementById("dataset").getElementsByClassName("selectized")[0].selectize.setValue("2021_Q2_thursday_trip", false); -->
+<!-- } -->
+<!-- window.onload = filter_default; -->
+```
+
+
+<!--#source data================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev 
+#area to upload data with and to perform initial munging
+#please add test data here so that others may use/unit test these scripts -->
+
+```{r}
+mem_data_network_objects = tar_read("mem_data_network_objects")
+mem_query_poly = tar_read("mem_query_poly")
+```
+
+
+<!-- #SECTION NAME=============================================================== -->
+<!-- #use this header to make demarcations/section in code [delete this line] -->
+<!-- #short description  -->
+
+```{r}
+make_network_map_anlto(mem_data_network_objects, mem_query_poly)
+
+```
+
+
+
+
+<!-- ### Tab {.tabset} -->
+
+<!-- #### Origins -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- #### Destinations -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- ### {-} -->
+
+<!--end-->

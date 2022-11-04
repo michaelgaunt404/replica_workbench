@@ -428,68 +428,7 @@ make_network_map_ = function(network_objects){
          
   )
   
-  #total map----
   
-  ##prepping data
-  # network_agg = data$network_agg
-  # 
-  # network_agg_mp = network_agg %>%  
-  #   st_true_midpoint()
-  # 
-  # network_agg_mp_sd = SharedData$new(network_agg_mp)
-  
-  ##make map
-  
-  # pal_centroids_tot = colorNumeric(
-  #   palette = "magma"
-  #   ,network_agg_mp$count_tot
-  #   ,reverse = T)
-  # 
-  # map_network = bscols(widths = c(3, 9)
-  #                      ,list(
-  #                        filter_select("dataset2", "Choose Dataset: "
-  #                                      ,network_agg_mp_sd, ~dataset)
-  #                        ,filter_slider("n2", "Link Count Slider:"
-  #                                       ,network_agg_mp_sd, ~count_tot)
-  #                      )
-  #                      ,leaflet(height = 800) %>% 
-  #                        leaflet_default_tiles() %>% 
-  #                        addCircleMarkers(data = network_agg_mp_sd
-  #                                         ,fillColor = ~pal_centroids_tot(network_agg_mp$count_tot)
-  #                                         ,color = "black"
-  #                                         ,opacity = .8
-  #                                         ,fillOpacity  = .5
-  #                                         ,weight = 1
-  #                                         ,radius = 5
-  #                                         ,group = "Network Links (mid-points)"
-  #                                         ,label = network_agg_mp$count_tot
-  #                                         ,labelOptions = labelOptions(noHide = F, textOnly = F)) %>% 
-  #                        addPolygons(data = cluster
-  #                                    ,color = "black"
-  #                                    ,opacity = .8
-  #                                    ,fillOpacity = .1
-  #                                    ,weight = 1
-  #                                    ,group = "OD Clusters"
-  #                                    ,label = cluster$index_cluster) %>%  
-  #                        ##layer control----
-  #                      addLayersControl(
-  #                        baseGroups = leaflet_default_tiles_index,
-  #                        overlayGroups =
-  #                          c("Network Links (mid-points)", "OD Clusters"),
-  #                        options = layersControlOptions(collapsed = F, sortLayers = F)) %>%  
-  #                        setView(lng= -122.668, lat = 45.45, zoom = 11) %>%
-  #                        addMouseCoordinates() %>% 
-  #                        ###legends----
-  #                      addLegend(
-  #                        position = "bottomleft"
-  #                        ,title = HTML("Link Truck Counts")
-  #                        ,group = "Network Links (mid-points)"
-  #                        ,pal = pal_centroids_tot
-  #                        ,opacity = 0.7
-  #                        ,values = network_agg_mp$count_tot)     
-  # )
-  # 
-  # list(map_network_od, map_network)
   
 }
 
