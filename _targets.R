@@ -31,25 +31,45 @@ tar_source()
 
 # Replace the target list below with your own:
 list(
-  tar_target(file_manual_cluster, here("data/geo_tracts_analysis_20220810/selected_geoms_5.RDS"), format = "file")
-  ,tar_target(data_manual_cluster, get_manual_cluster(file_manual_cluster))
-  ,tar_target(data_block_groups_sa, get_block_groups())
-  ,tar_target(data_block_groups_selected_od,  get_block_groups_selected_od())
-  ,tar_target(data_bg_clust, data_bg_clust(data_block_groups_selected_od, data_manual_cluster))
-  ,tar_target(data_queried_trips_2019
-              ,query_trip_info(data_bgclust = data_bg_clust, data_bgsa = data_block_groups_sa
-                               ,schema_table = "northwest.northwest_2019_Q4_thursday_trip"))
-  ,tar_target(data_queried_trips_2021
-              ,query_trip_info(data_bgclust = data_bg_clust, data_bgsa = data_block_groups_sa
-                                ,schema_table = "northwest.northwest_2021_Q2_thursday_trip"))
-  ,tar_target(data_processed_queries,  make_spatial_networks(data_queried_trips_2019, data_queried_trips_2021))
-  ,tar_target(map_objects, make_network_maps(data_processed_queries, data_manual_cluster))
-  ,tar_render(dashboard_cluster_analysis, "index.rmd")
+  # tar_target(file_manual_cluster, here("data/geo_tracts_analysis_20220810/selected_geoms_5.RDS"), format = "file")
+  # ,tar_target(data_manual_cluster, get_manual_cluster(file_manual_cluster))
+  # ,tar_target(data_block_groups_sa, get_block_groups())
+  # ,tar_target(data_block_groups_selected_od,  get_block_groups_selected_od())
+  # ,tar_target(data_bg_clust, data_bg_clust(data_block_groups_selected_od, data_manual_cluster))
+  # ,tar_target(data_queried_trips_2019
+  #             ,query_trip_info(data_bgclust = data_bg_clust, data_bgsa = data_block_groups_sa
+  #                              ,schema_table = "northwest.northwest_2019_Q4_thursday_trip"))
+  # ,tar_target(data_queried_trips_2021
+  #             ,query_trip_info(data_bgclust = data_bg_clust, data_bgsa = data_block_groups_sa
+  #                               ,schema_table = "northwest.northwest_2021_Q2_thursday_trip"))
+  # ,tar_target(data_processed_queries,  make_spatial_networks(data_queried_trips_2019, data_queried_trips_2021))
+  # ,tar_target(map_objects, make_network_maps(data_processed_queries, data_manual_cluster))
+  # ,tar_render(dashboard_cluster_analysis, "index.rmd")
   
-  #test targets---
-  ,tar_target(map_leaflet, test_leaflet())
-  ,tar_target(dt_datatable, test_datatable())
-  ,tar_target(map_crosstalk_leaflet, test_leaflet_providers())
+  ##request Memphis-----
+  tar_target(mem_network
+             ,here("data/memphis_req/data_queried"
+                   ,"network_memphis_pro_20221101.gpkg"), format = "file")
+  ,tar_target(mem_query_poly
+              ,here("data/memphis_req/data_for_query"
+                    ,"split_taz_polys_pro_comb_20221103.shp"), format = "file")
+  ,tar_target(mem_data_trip
+              ,query_replica(data = mem_query_poly 
+                             ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_taz"
+                             ,limit = NA))
+  ,tar_target(mem_data_network_objects
+              ,make_spatial_networks(
+                network = mem_network
+                ,query_poly = mem_query_poly
+                ,data = mem_data_trip))
+  ,tar_target(map_interative_anl, make_network_map_anl(mem_data_network_objects, mem_query_poly))
+  ,tar_target(map_interative_anlt, make_network_map_anlt(mem_data_network_objects, mem_query_poly))
+  ,tar_target(map_interative_anlto, make_network_map_anlto(mem_data_network_objects, mem_query_poly))
+  ,tar_render(dashboard_memphis_origin, "analysis/template_analysis_replica_origin.rmd")
+  ,tar_render(dashboard_memphis_network_agg, "analysis/template_analysis_replica_network_agg.rmd")
+  ,tar_render(dashboard_memphis_origin_poly, "analysis/template_analysis_replica_origin_poly.rmd")
+  
+  
   
 )
 

@@ -59,10 +59,10 @@ library(targets)
 #content in this section should be removed if in production - ok for dev -->
 
 ```{js}
-function filter_default() {
-    document.getElementById("dataset").getElementsByClassName("selectized")[0].selectize.setValue("2021_Q2_thursday_trip", false);
-}
-window.onload = filter_default;
+<!-- function filter_default() { -->
+<!--     document.getElementById("dataset").getElementsByClassName("selectized")[0].selectize.setValue("2021_Q2_thursday_trip", false); -->
+<!-- } -->
+<!-- window.onload = filter_default; -->
 ```
 
 
@@ -73,7 +73,8 @@ window.onload = filter_default;
 #please add test data here so that others may use/unit test these scripts -->
 
 ```{r}
-map_objects = tar_read("map_objects")
+mem_data_network_objects = tar_read("mem_data_network_objects")
+mem_query_poly = tar_read("mem_query_poly")
 ```
 
 
@@ -82,7 +83,15 @@ map_objects = tar_read("map_objects")
 <!-- #short description  -->
 
 ```{r}
-map_objects
+make_network_map_anlt(mem_data_network_objects, mem_query_poly)
+```
+
+<!-- #SECTION NAME=============================================================== -->
+<!-- #use this header to make demarcations/section in code [delete this line] -->
+<!-- #short description  -->
+
+```{r}
+make_network_map_anlto(mem_data_network_objects, mem_query_poly)
 ```
 
 

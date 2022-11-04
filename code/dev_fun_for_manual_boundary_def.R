@@ -6,6 +6,12 @@ library(leaflet)
 library(mapedit)
 library(tidyverse)
 
+
+
+
+
+
+
 input_bg_year = 2010 
 
 states = states() %>%  
@@ -42,30 +48,44 @@ edit_blockgroup = function(){
   if(var_edit != "n" ){
     
     for(i in 1:99){
-      sa_blockgroup_subset = sa_blockgroup %>%  
-        selectFeatures()
+      print(i)
+      if (exists('sa_blockgroup_subset')){rm(sa_blockgroup_subset)}
       
-      sa_blockgroup_subset_1 = sa_blockgroup_subset %>% 
-        st_transform(crs = 4326) 
+      sa_blockgroup_subset_edit = map_sa_blockgroup@map %>%  
+        editMap()
       
-      message("The following map is the result of your subset....")
+      saveRDS(sa_blockgroup_subset_edit$all, here("data/mapedit/temp_sel_bg.rds"))
+      map_edit_sa_blockgroup = read_rds(here("data/mapedit/temp_sel_bg.rds"))
       
-      print(sa_blockgroup_subset_1)
+      fltrd_bg = sa_blockgroup %>%  
+        st_join(map_edit_sa_blockgroup) %>%  
+        filter(!is.na(X_leaflet_id ))
       
-      leaflet() %>% 
-        addPolygons(data = sa_blockgroup
-                    ,group = "Study Area"
-                    ,color = "black"
-                    ,fillColor = "blue"
-                    ,fillOpacity = .1
-                    ,weight = 1) %>%
-        addPolygons(data = sa_blockgroup_subset_1
-                    ,group = "User Selection"
-                    ,color = "black"
-                    ,fillColor = "red"
-                    ,fillOpacity = .5
-                    ,weight = 1)
-        
+      (mapview(sa_blockgroup
+               ,layer.name = "User Defined Study Area"
+               ,alpha.regions = .2) + 
+          mapview(fltrd_bg
+                  ,col = 'fltrd_bg'
+                  ,layer.name = "Block Group Subselection"
+                  ,col.regions = "red") ) %>% print()
+      
+      
+      # sa_blockgroup_subset = sa_blockgroup %>%  
+      #   selectFeatures()
+      
+      # saveRDS(sa_blockgroup_subset, here("data/mapedit/temp_sel_bg.rds"))
+      # map_edit_sa_blockgroup = read_rds(here("data/mapedit/temp_sel_bg.rds"))
+      # 
+      # message("The following map is the result of your subset....")
+      # 
+      # (mapview(sa_blockgroup
+      #          ,layer.name = "User Defined Study Area"
+      #          ,alpha.regions = .2) + 
+      #     mapview(map_edit_sa_blockgroup
+      #             ,layer.name = "Block Group Subselection"
+      #             ,col.regions = "red") ) %>% print()
+      
+
       for(i in 1:99){
         var_edit_again = readline("Would you like to redo the subsetting process? [y/n]")
         if(var_edit_again %in%  c("y", "n" )){break}
@@ -78,10 +98,13 @@ edit_blockgroup = function(){
   } else {
     map_edit_sa_blockgroup = map_edit_states
   }
+  
+  return(list("study_area" = map_edit_states
+       ,"subselection" = map_edit_sa_blockgroup))
 }
 
 
-edit_blockgroup()
+boundaries = edit_blockgroup()
 
 
 
@@ -121,25 +144,41 @@ counties = sel_states$STATEFP %>%
 sel_counties = counties %>%  
   selectFeatures()
 
+sel_counties %>%  
+  st_drop_geometry() %>%
+  clipr::write_clip()
+
 #get and select blockgroups
 blockgroups = list(sel_counties$STATEFP, sel_counties$COUNTYFP) %>% 
   pmap(~block_groups(state = .x, county = .y, year = input_bg_year) %>%  
-         st_transform(crs = 4326) %>%  
-         st_filter(map_edit_states_aug)) %>%  
+         st_transform(crs = 4326)) %>%  
   reduce(rbind)
 
 sel_blockgroups = blockgroups %>%  
   selectFeatures()
 
-sel_blockgroups = blockgroups %>%  
-  mapview() %>%
+map_bg = blockgroups %>%  
+  mapview()
+
+sel_blockgroups = map_bg@map %>%
   editMap()
 
-sel_blockgroups[['drawn']] %>%  
-  mapview()
+# map_temp = sel_blockgroups$all %>%  
+#   mapview()
+# 
+# map_temp %>%  
+#   editMap()
+
+sel_blockgroups$all %>% 
+  saveRDS("data/temp_map_delete.rds")
+
+temp_object = read_rds("data/temp_map_delete.rds")
+
+ 
+  mapview(temp_object) + map_bg
 
 sel_blockgroups[['all']] %>%  
-  mapview()
+  mapview() + map_bg
 
 sel_blockgroups[['finished']] %>%  
   mapview()
