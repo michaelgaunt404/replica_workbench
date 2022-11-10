@@ -38,6 +38,31 @@
 
 #data prep and query============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+purrr_get_safe_results = function(object, type = "result"){
+  object %>%
+    map(~.x[[type]])
+}
+
+dbGetQuery_safe = purrr::safely(DBI::dbGetQuery)
+
+query_database = function(db_connection, query_string, query_item, dataset){
+  temp_data = dbGetQuery(db_connection, query_string)
+  
+  message(paste0(nrow(temp_data), " rows returned..."))
+  
+  temp_data %>% 
+    mutate(queried_group = query_item
+           ,dataset = dataset)
+}
+
+query_database_safe = purrr::safely(query_database)
+
+query_database_count = function(db_connection, query_string){
+  temp = dbGetQuery(db_connection, query_string)
+
+  temp[[1]]
+}
+
 query_poi_to_everything = function(data, db_connection, schema_table, limit = 50){
   
   limit_query = ifelse(is.na(limit), ";", str_glue("limit {limit};"))
@@ -48,9 +73,12 @@ query_poi_to_everything = function(data, db_connection, schema_table, limit = 50
     select(group, id) 
   
   message("Begin query..")
-  queried_data = poly_query_df$group %>%  
+  
+  query_index = poly_query_df$group %>%  
     unique() %>%  
-    sort() %>% 
+    sort() 
+  
+  queried_data = query_index %>% 
     map(~{
       
       message(paste0("Querying for ", .x))
@@ -65,30 +93,123 @@ query_poi_to_everything = function(data, db_connection, schema_table, limit = 50
   `{schema_table}`
  WHERE start_taz IN ({query_focus_id}) AND mode = 'COMMERCIAL' {limit_query}")
       
-      temp_data = dbGetQuery(db_connection, query_string)
-      
-      message(paste0(nrow(temp_data), " rows returned..."))
-      
-      temp_data %>% 
-        mutate(queried_group = .x
-               ,queried_poi = query_focus_id
-               ,dataset = schema_table)
+      temp_data = query_database_safe(db_connection, query_string, .x,  schema_table)
       
     })
   
-  queried_data
+  message("++++\n++++\nQuery complete....")
+  
+  queried_data_results = queried_data %>%  
+    purrr_get_safe_results() %>% 
+    reduce(bind_rows)
+  
+  bad_groups = query_index[!(query_index %in% 
+                               queried_data_results$queried_group)]
+  
+  if (length(bad_groups)>0){
+    message(str_glue('Unsuccessfully queried groups: \n{paste(bad_groups,collapse = "\n")}'))
+  } else {
+    message("All groups successfully queried!")
+  }
+  queried_data_results
 }
 
-query_poi_to_everything_safe = purrr::safely(query_poi_to_everything)
-
-purrr_get_safe_results = function(object, type = "result"){
-  object %>%
-    map(~.x[[type]])
+query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, limit = 50){
+  
+  poly_query_df = data %>%  
+    st_drop_geometry() %>% 
+    filter(group != "no_group_id") %>%  
+    select(group, id) 
+  
+  message("Begining query...")
+  
+  query_index = poly_query_df$group %>%  
+    unique() %>%  
+    sort()
+  
+  queried_data = query_index %>% 
+    map(~{
+      
+      query_focus_id = poly_query_df %>%  
+        filter(group == .x) %>%  
+        pull(id) %>% 
+        paste0("'", ., "'") %>% 
+        paste(collapse = ", ") 
+      
+      temp_table_name = "replica-customer._script455c3f9d5ccc9ec914f73e8a4f3cdd38d3335e74.temp_table_k_lmt_dl"
+      
+      query_string = str_glue("SELECT count(*) as count FROM `{temp_table_name}`
+    WHERE start_taz IN ({query_focus_id})")
+      
+      limit = query_database_count(db_connection, query_string)
+      limit_k_adj = ceiling(limit/1000)
+      
+      if (limit == 0){
+        message(paste0("''''\nQuerying for ", .x))
+        message(str_glue("There are {limit} records for this group, skipping..."))
+        
+      } else {
+        
+        message(paste0("''''\nQuerying for ", .x))
+        message(str_glue("There are {limit} records for this group..."))
+        message(str_glue("Will make {limit_k_adj} queries of 1000 records...\n\n''''"))
+        
+        temp_data = list(rep(.x, limit_k_adj)
+                         ,seq(1, limit_k_adj, 1)
+        ) %>% 
+          pmap(~{
+            
+            lim_bttm = ((.y-1)*1000)
+            lim_uppr = ((.y)*1000)
+            
+            query_string = str_glue("SELECT * FROM `{temp_table_name}`
+                                WHERE row >= {lim_bttm} AND 
+                                row < {lim_uppr};")
+            
+            data = dbGetQuery_safe(
+              db_connection
+              ,query_string)
+            
+            if ((!is.null(data$result) & is.null(data$error))==TRUE){
+              message(str_glue("''''\nQuery {.y} of {limit_k_adj} successful -- {nrow(data$result)} records received..."))
+            } else {
+              message("Query {.y} of {limit_k_adj} unsuccessful...")
+            }
+            
+            data
+          })
+        
+        temp_data %>%  
+          purrr_get_safe_results() %>%  
+          reduce(bind_rows) %>%  
+          arrange(row)
+        
+      }
+    })
+  
+  message("++++\n++++\nQuery complete....")
+  
+  queried_data_results = queried_data %>%  
+    reduce(bind_rows)
+  
+  bad_groups = query_index[!(query_index %in% 
+                               queried_data_results$start_taz)]
+  
+  if (length(bad_groups)>0){
+    message(str_glue('Groups unsuccessfully queried: \n{paste(bad_groups,collapse = "\n")}'))
+  } else {
+    message("All groups successfully queried!")
   }
+  queried_data_results
+}
 
 query_replica = function(data, schema_table, limit = 50){
   # data = tar_read('mem_query_poly')
   # schema_table ="wsp.south_central_2021_Q4_thursday_trip_taz"
+  # data = tar_read("mem_query_poly_custom")
+  # schema_table = "wsp.south_central_2021_Q4_thursday_trip_custom_taz"
+  
+  # browser()
 
   data_pro = read_sf(data)
   
@@ -98,17 +219,12 @@ query_replica = function(data, schema_table, limit = 50){
     dataset = schema_table
   )
   
-  # message(con)
+  queried_data =  query_poi_to_everything_k_lmt(data = data_pro
+                                          ,db_connection = con
+                                          ,schema_table = schema_table
+                                          ,limit = limit) 
   
-  queried_data =  query_poi_to_everything_safe(data = data_pro
-                                               ,db_connection = con
-                                               ,schema_table = schema_table
-                                               ,limit = limit)  %>% 
-   .[["result"]] %>%  
-    reduce(bind_rows)
- 
   queried_data
-  
 }
 
 get_replica_network = function(query_data, schema_table, limit = 25
@@ -142,7 +258,9 @@ get_replica_network = function(query_data, schema_table, limit = 25
 make_spatial_networks = function(network, data, query_poly, rm_self = T){
   # network = tar_read('mem_network')
   # query_poly = tar_read('mem_query_poly')
+  # query_poly = tar_read('mem_query_poly_custom')
   # data = tar_read('mem_data_trip')
+  
   
   message("Preping data...")
   
@@ -160,6 +278,7 @@ make_spatial_networks = function(network, data, query_poly, rm_self = T){
   
   data_pro = data %>%  
     mutate(count = 1) %>% 
+    mutate(dataset = "wsp.south_central_2021_Q4_thursday_trip_custom_taz") %>% 
     select(c('dataset', 'activity_id', 'start_taz'
              ,'end_taz', 'vehicle_type', 'network_link_ids', 'count')) %>% 
     {if (rm_self) (.) %>%  filter(start_taz != end_taz) else .} %>% 
