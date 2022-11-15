@@ -84,8 +84,34 @@ list(
   ,tar_render(dashboard_memphis_origin_custom, "analysis/template_analysis_replica_origin.rmd")
   ,tar_render(dashboard_memphis_network_agg_custom, "analysis/template_analysis_replica_network_agg.rmd")
   ,tar_render(dashboard_memphis_origin_poly_custom, "analysis/template_analysis_replica_origin_poly.rmd")
-  
-  
-)
+  # ,tar_render(report
+  #             ,"analysis/template_analysis_replica_report.rmd"
+  #             ,params = list(network = "mem_data_network_objects_custom"
+  #                            ,polys = "mem_query_poly_custom"
+  #                            ,analysis = "anl")
+  #             ,output_file = "ZZZZ.html")
+  ,tar_render_rep(report
+                  ,"analysis/template_analysis_replica_report.rmd"
+                  ,params = 
+                    tibble(
+                      network = c("mem_data_network_objects_custom"
+                                  ,"mem_data_network_objects_custom"
+                                  ,"mem_data_network_objects_custom"
+                                  ,"mem_data_network_objects_custom")
+                      ,polys = c("mem_query_poly_custom"
+                                 ,'mem_query_poly_custom'
+                                 ,"mem_query_poly_custom"
+                                 ,'mem_query_poly_custom')
+                      ,analysis = c("anlt", "anl", "anlto", "od")
+                      ,output_file = c("analysis_customPoly_anlt.html"
+                                       ,"analysis_customPoly_anl.html"
+                                       ,"analysis_customPoly_anlt0.html"
+                                       ,"analysis_customPoly_od.html")
+                    )
+  )
+)            
+
+
+
 
 

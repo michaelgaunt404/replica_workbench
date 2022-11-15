@@ -255,12 +255,15 @@ get_replica_network = function(query_data, schema_table, limit = 25
     st_filter(query_data)
 }
 
+
+
+#map functions==================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 make_spatial_networks = function(network, data, query_poly, rm_self = T){
   # network = tar_read('mem_network')
-  # query_poly = tar_read('mem_query_poly')
+  # # query_poly = tar_read('mem_query_poly')
   # query_poly = tar_read('mem_query_poly_custom')
-  # data = tar_read('mem_data_trip')
-  
+  # data = tar_read('mem_data_trip_custom')
   
   message("Preping data...")
   
@@ -304,14 +307,55 @@ make_spatial_networks = function(network, data, query_poly, rm_self = T){
     count_percent_zscore(
       grp_c = c('dataset', 'network_link_ids_trunc', 'vehicle_type')
       ,grp_p = c('dataset', 'network_link_ids_trunc')
-      ,col = count)
+      ,col = count) %>%  
+    arrange(network_link_ids_trunc, vehicle_type, desc(count)) %>%  
+    group_by(dataset, vehicle_type) %>% 
+    mutate(count_pRank_adj = dgt2(percent_rank(count))) %>%
+    mutate(count_adj_max = dgt2(count/max(count))) %>%
+    ungroup() %>% 
+    group_by(network_link_ids_trunc) %>%
+    mutate(ttl_count_link = sum(count)) %>%
+    ungroup() %>%
+    group_by(vehicle_type) %>%
+    mutate(ttl_count_link_type = sum(count)) %>%  
+    ungroup() %>% 
+    mutate(label = str_glue(
+      "Link: {network_link_ids_trunc} 
+    <br>Total Link Volume: {ttl_count_link}
+    <hr>
+    Metrics  Adj for Vehicle Type 
+    <br>Vehicle Type: {ttl_count_link_type}
+    <br>Link Volume: {count} ({100*dgt2(percent)}% of link total)
+    <br>Link Volume/max(Link Volume): {100*count_adj_max}%"))
   
   #agg by network link
   agg_network_link_type_origin = link_unnest %>%  
     count_percent_zscore(
       grp_c = c('dataset', 'start_taz', 'start_taz_group', 'network_link_ids_trunc', 'vehicle_type')
       ,grp_p = c('dataset', 'start_taz', 'start_taz_group', 'network_link_ids_trunc')
-      ,col = count)
+      ,col = count) %>% 
+    arrange(start_taz_group, vehicle_type, desc(count)) %>%  
+    group_by(dataset, start_taz_group, vehicle_type) %>%  
+    mutate(count_pRank_adj = dgt2(percent_rank(count))) %>%
+    mutate(count_adj_max = dgt2(count/max(count))) %>%
+    ungroup() %>% 
+    group_by(start_taz_group) %>%  
+    mutate(ttl_count_orgin = sum(count)) %>%  
+    ungroup() %>% 
+    group_by(start_taz_group, vehicle_type) %>%  
+    mutate(ttl_count_orgin_type = sum(count)) %>%  
+    ungroup() %>% 
+    mutate(ttl_count_orgin_type_other = ttl_count_orgin-ttl_count_orgin_type
+           ,ttl_count_orgin_type_per = ttl_count_orgin_type/ttl_count_orgin) %>% 
+    mutate(label = str_glue(
+      "Origin Group: {start_taz_group} 
+    <br>Total Origin Trips: {ttl_count_orgin}
+    <hr>
+    Metrics  Adj for Vehicle Type 
+    <br>Vehicle Type: {vehicle_type}
+    <br>Total Origin Trips: {ttl_count_orgin_type} ({100*dgt2(ttl_count_orgin_type_per)}% of total)
+    <br>Link Volume: {count} ({100*dgt2(percent)}% of link total)
+    <br>Link Volume/max(Link Volume): {100*count_adj_max}%")) 
   
   #agg by network link
   agg_od = data_pro %>% 
@@ -331,13 +375,13 @@ make_spatial_networks = function(network, data, query_poly, rm_self = T){
     group_by(start_taz_group, vehicle_type) %>%  
     mutate(ttl_count_orgin_type = sum(count)) %>%  
     ungroup() %>% 
-    rename(percent_origin_trips = percent)
+    rename(percent_origin_trips = percent) 
   
   query_poly_od = query_poly %>%  
     merge(agg_od %>%  
             select(!dataset)
           ,by.x = c('id'), by.y = c("end_taz")) 
-
+  
   message("Merging networks...")
   
   network_merged = list(agg_network_link = agg_network_link
@@ -356,8 +400,6 @@ make_spatial_networks = function(network, data, query_poly, rm_self = T){
   
 }
 
-#map functions==================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 make_network_map_anl = function(network_objects, file_query_poly){
   # network_objects = tar_read('mem_data_network_objects')
   # file_query_poly = tar_read("mem_query_poly")
@@ -473,6 +515,8 @@ make_network_map_anl = function(network_objects, file_query_poly){
 make_network_map_anlt = function(network_objects, file_query_poly){
   # network_objects = tar_read('mem_data_network_objects')
   # file_query_poly = tar_read("mem_query_poly")
+  # network_objects = tar_read('mem_data_network_objects_custom')
+  # file_query_poly = tar_read("mem_query_poly_custom")
   
   #global vars/objects~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -505,14 +549,15 @@ make_network_map_anlt = function(network_objects, file_query_poly){
   #prep data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   net_anlt = network_objects$agg_network_link_type %>%  
+    sample_n(100000) %>%
     filter(!is.na(count) & !is.na(startLon)) %>% 
     mutate(flag_NHS = case_when((str_detect(streetName, "^US") |
                                    str_detect(streetName, "^I"))~streetName
-                                ,T~NA_character_)) %>% 
-    group_by(highway) %>% 
-    mutate(count_std_hwy = dgt2(percent_rank(count))) %>%  
-    ungroup() %>% 
-    mutate(label = str_glue("Network Link: {streetName} <br> Type: {highway} <br> Vehicle: Type {vehicle_type} <br> Link Volume {count}"))
+                                ,T~NA_character_))  
+    # group_by(highway) %>% 
+    # mutate(count_std_hwy = dgt2(percent_rank(count))) %>%  
+    # ungroup() %>% 
+    # mutate(label = str_glue("Network Link: {streetName} <br> Type: {highway} <br> Vehicle: Type {vehicle_type} <br> Link Volume {count}"))
   
   net_anlt_cntrd = net_anlt %>%  
     gauntlet::st_true_midpoint()
@@ -549,8 +594,10 @@ make_network_map_anlt = function(network_objects, file_query_poly){
                             ,net_anlt_cntrd_sd, ~count)
              ,filter_slider("net_anlt_cntrd_sd_countlg10", "Link Volume (vehicle counts - log10 adj):"
                             ,net_anlt_cntrd_sd, ~dgt2(log10(count)))
-             ,filter_slider("net_anlt_cntrd_sd_count_std_hwy", "Link Volume % Rank (adj for road type):"
-                            ,net_anlt_cntrd_sd, ~count_std_hwy))
+             ,filter_slider("net_anlt_cntrd_sd_count_std_hwy", "Link Volume / Max Link Volume:"
+                            ,net_anlt_cntrd_sd, ~count_adj_max)
+             ,filter_slider("net_anlt_cntrd_sd_per_util", "Link Utilization by Vehicle Type:"
+                            ,net_anlt_cntrd_sd, ~100*dgt2(percent)))
          )
          ,leaflet(height = 700) %>%
            addTiles(group = "OSM (default)") %>%
@@ -596,6 +643,9 @@ make_network_map_anlt = function(network_objects, file_query_poly){
 make_network_map_anlto = function(network_objects, file_query_poly){
   # network_objects = tar_read('mem_data_network_objects')
   # file_query_poly = tar_read("mem_query_poly")
+  # network_objects = tar_read('mem_data_network_objects_custom')
+  # file_query_poly = tar_read("mem_query_poly_custom")
+  
   
   #global vars/objects~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -629,18 +679,11 @@ make_network_map_anlto = function(network_objects, file_query_poly){
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   net_anlto = network_objects$agg_network_link_type_origin %>%  
     filter(!is.na(count) & !is.na(startLon)) %>% 
+    # filter(start_taz %in% c("8_River - South", "12_Lamar")) %>% 
+    # sample_n(80000) %>%
     mutate(flag_NHS = case_when((str_detect(streetName, "^US") |
                                    str_detect(streetName, "^I"))~streetName
-                                ,T~NA_character_)) %>% 
-    group_by(start_taz_group, vehicle_type) %>% 
-    mutate(count_std = dgt2(percent_rank(count))) %>%  
-    ungroup() %>% 
-    group_by(highway) %>% 
-    mutate(count_std_hwy = dgt2(percent_rank(count))) %>%  
-    ungroup() %>% 
-    mutate(label = str_glue("Origin Group: {start_taz_group} <br> Network Link: {streetName} 
-                            <br> Type: {highway} <br> Vehicle: Type {vehicle_type} 
-                            <br> Link Volume {count} <br> Link Volume {count_std} <br>(adj origin & veh)"))
+                                ,T~NA_character_)) 
   
   net_anlto_cntrd = net_anlto %>%  
     gauntlet::st_true_midpoint()
@@ -672,6 +715,8 @@ make_network_map_anlto = function(network_objects, file_query_poly){
                             ,net_anlto_cntrd_sd, ~start_taz_group)
            )
            ,HTML("Network Link Volume Filters") %>%  strong()
+           ,br()
+           ,"(adj for origin & veh type)"
            ,shiny::hr()
            ,bscols(
              widths = c(12)
@@ -679,10 +724,10 @@ make_network_map_anlto = function(network_objects, file_query_poly){
                             ,net_anlto_cntrd_sd, ~count)
              ,filter_slider("net_anlto_cntrd_sd_countlg10", "Link Volume (vehicle counts - log10 adj):"
                             ,net_anlto_cntrd_sd, ~dgt2(log10(count)))
-             ,filter_slider("net_anlto_cntrd_sd_count_std", "Link Volume % Rank (adj for orgin/vehicle):"
-                            ,net_anlto_cntrd_sd, ~count_std)
-             ,filter_slider("net_anlto_cntrd_sd_count_std_hwy", "Link Volume % Rank (adj for road type):"
-                            ,net_anlto_cntrd_sd, ~count_std_hwy)
+             ,filter_slider("net_anlto_cntrd_sd_count_adj_max", "Link Volume / Max Link Volume:"
+                            ,net_anlto_cntrd_sd, ~count_adj_max)
+             ,filter_slider("net_anlto_cntrd_sd_per_util", "Link Utilization by Vehicle Type:"
+                             ,net_anlto_cntrd_sd, ~100*dgt2(percent))
            )
          )
          ,leaflet(height = 700) %>%
@@ -696,8 +741,8 @@ make_network_map_anlto = function(network_objects, file_query_poly){
                             ,weight = 1
                             ,radius = 5
                             ,group = "Network Links (mid-points)"
-                            # ,popup = popup_tbl_pretty(network_agg_od_mp_sm %>%
-                            #                             select(!c(text, label)))
+                            # ,popup = popup_tbl_pretty(net_anlto_cntrd %>%
+                            #                             select(label))
                             ,label =
                               net_anlto_cntrd$label %>%
                               map(htmltools::HTML)
@@ -730,6 +775,8 @@ make_network_map_anlto = function(network_objects, file_query_poly){
 make_map_origin = function(network_objects, file_query_poly){
   # network_objects = tar_read('mem_data_network_objects')
   # file_query_poly = tar_read("mem_query_poly")
+  # network_objects = tar_read('mem_data_network_objects_custom')
+  # file_query_poly = tar_read("mem_query_poly_custom")
   
   #global vars/objects~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -777,10 +824,11 @@ make_map_origin = function(network_objects, file_query_poly){
     <br> % of Origin Total: {100*percent_origin_trips}%
     <br> Max Destination Count: {count_max}
     <br> % of Max OD Count: {100*count_adj_max}%
-    <br> Count Percent Rank: {count_pRank_adj}"))   
+    <br> Link Volume Percent Rank: {count_pRank_adj}"))   
   
   query_poly_od_cntrd = query_poly_od %>%  
-    st_centroid()
+    st_make_valid() %>% 
+    st_centroid() 
   
   query_poly_od_cntrd_sd = SharedData$new(query_poly_od_cntrd)
   
@@ -860,33 +908,3 @@ make_map_origin = function(network_objects, file_query_poly){
 
 
 
-
-
-
-
-
-
-
-
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 
-                 

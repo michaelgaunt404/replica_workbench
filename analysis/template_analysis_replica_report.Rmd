@@ -8,6 +8,7 @@
 #     vertical_layout: fill
 params:
   network: "mem_data_network_objects_custom"
+  polys: "mem_query_poly_custom"
   analysis: "od"
 ---
 
@@ -35,8 +36,25 @@ knitr::opts_chunk$set(
 #content in this section should be removed if in production - ok for dev -->
 
 ```{r}
+# params$network
+# params$analysis
 library(targets)
+library(sf)
 ```
+
+```{r}
+params_analysis = params$analysis
+params_network = params$network
+params_polys = params$polys
+```
+
+```{r}
+# params_network = "mem_data_network_objects_custom"
+# tar_read_raw(params_network)
+```
+
+
+
 
 <!--#source helpers/utilities===================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,12 +75,15 @@ library(targets)
 #please add test data here so that others may use/unit test these scripts -->
 
 ```{r}
-mem_data_network_objects = tar_read("mem_data_network_objects_custom")
-mem_data_network_objects[[3]] %>%  
-  head() %>%  
-  st_drop_geometry() 
-# mem_query_poly = tar_read("mem_query_poly_custom")
+mem_data_network_objects = tar_read_raw(params_network)
+
+mem_query_poly = tar_read_raw(params_polys)
 ```
+
+```{r}
+# mem_data_network_objects %>%  st_drop_geometry() %>%  head()
+```
+
 
 
 <!-- #SECTION NAME=============================================================== -->
@@ -70,26 +91,19 @@ mem_data_network_objects[[3]] %>%
 <!-- #short description  -->
 
 ```{r}
-
-params_analysis = params$analysis
-
 if (params_analysis == "od"){
-  print("od")
-  # make_map_origin(mem_data_network_objects, mem_query_poly)
+  # print("od")
+  make_map_origin(mem_data_network_objects, mem_query_poly)
 } else if (params_analysis == "anlto"){
-  print("anlto")
-  # make_network_map_anlto(mem_data_network_objects, mem_query_poly)
+  # print("anlto")
+  make_network_map_anlto(mem_data_network_objects, mem_query_poly)
 } else if (params_analysis == "anlt"){
-  print("anlt")
-  # make_network_map_anlt(mem_data_network_objects, mem_query_poly)
+  # print("anlt")
+  make_network_map_anlt(mem_data_network_objects, mem_query_poly)
 } else if (params_analysis == "anl"){
-  print("anl")
-  # make_network_map_anl(mem_data_network_objects, mem_query_poly)
+  # print("anl")
+  make_network_map_anl(mem_data_network_objects, mem_query_poly)
 }
-
-
-# make_network_map_anlto(mem_data_network_objects, mem_query_poly)
-
 ```
 
 
