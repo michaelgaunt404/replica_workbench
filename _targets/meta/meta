@@ -2,6 +2,7 @@ name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iterat
 .Random.seed|object|40056e5ef69c0890|||||||||||||||
 block_groups|object|66aa2f67513dab8d|||||||||||||||
 clusters|object|1beb5cedec9a45ed|||||||||||||||
+count_percent_zscore_dt|function|3b9f061202a3e5f6|||||||||||||||
 dashboard_cluster_analysis|stem|85b7ffdb57227c10|4f62e8d676c65b91|30611bf8f1660a96|-1859383636|index.html*index.rmd|t19264.7915400958s|4b203ed21d468785|93043535|file|local|vector|||236.47||
 dashboard_memphis|stem|e5547933ec2d1ccc|49ca764eff971e1a|8e7ab87b12451b5d|-288430083|analysis/template_analysis_replica_origin.html*analysis/template_analysis_replica_origin.rmd|t19298.9292992215s|6386e8ccea7269c7|68725114|file|local|vector|||198.97|Sum of bscol width units is greater than 12|
 dashboard_memphis_network_agg|stem|89822f95d7c86016|fe46e788ec73db6c|38b9662988578a73|-455460874|analysis/template_analysis_replica_network_agg.html*analysis/template_analysis_replica_network_agg.rmd|t19300.6558054523s|f8a64b601b0480f4|23012338|file|local|vector|||52.96|Sum of bscol width units is greater than 12. Sum of bscol width units is greater than 12|
@@ -27,14 +28,15 @@ get_block_groups_manual|function|390d22c46581dc6f|||||||||||||||
 get_block_groups_selected_od|function|390d22c46581dc6f|||||||||||||||
 get_manual_cluster|function|4348bdad7a876295|||||||||||||||
 get_replica_network|function|3191a1220f102c32|||||||||||||||
-make_map_origin|function|782a1a5f4595e835|||||||||||||||
+make_map_origin|function|eae8e88fb75bd626|||||||||||||||
 make_network_map_|function|f2f093645f665f1f|||||||||||||||
 make_network_map_anl|function|5213b42e999c9254|||||||||||||||
 make_network_map_anlt|function|c9ceb8f4c1effa62|||||||||||||||
 make_network_map_anlto|function|b68bb9a9bf0768ec|||||||||||||||
 make_network_maps|function|587542a3165ac7fa|||||||||||||||
+make_network_points|function|3299e4a41a4f588c|||||||||||||||
 make_nezzzz|function|179dd26c5cebba44|||||||||||||||
-make_spatial_networks|function|488b643a4bf1b612|||||||||||||||
+make_spatial_networks|function|7ef809ef214b4456|||||||||||||||
 map_crosstalk_leaflet|stem|086194a5dee96417|e921b071766d4718|0e3599471fb5a43e|2080857828||t19262.8515943422s|ccab800d2ed1f155|4375|rds|local|vector|||7.27|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
 map_interative_anl|stem|a8070b55d521f0ca|59ec891e487f5361|cf79782800716026|973678896||t19300.6560236318s|925e8d0f07261996|6641594|rds|local|vector|||14.88||
 map_interative_anlt|stem|c4437c6dbaf61631|bd14be8f50f1e379|5c8ff2812b37e492|-2134310331||t19300.6533799691s|3722652b97c4899d|7263886|rds|local|vector|||25.44|Sum of bscol width units is greater than 12. Sum of bscol width units is greater than 12|
@@ -43,11 +45,18 @@ map_interative_anlto|stem|d315bcfcc891b181|9e3e2360fd547e60|83e566cb63a1c28f|107
 map_objects|stem|b83466f9c84f4aa5|2f21856e1a2a1394|2ce47417e037145e|-311258946||t19264.7006541624s|d007e2dad961a793|5179996|rds|local|vector|||62.64|Some values were outside the color scale and will be treated as NA|
 mem_data_network_objects|stem|cf57cadc66fc3762|7a8d2b06aab051da|62496391de8b49ca|114517055||t19300.7003230455s|c5770a8f05f9166a|135923988|rds|local|vector|||180.6||
 mem_data_network_objects_custom|stem|910e49c53bfcae27|d988dd5fd90d7391|aeceeda72b049401|-1981535615||t19310.7661518812s|89219cb69b614d72|151163110|rds|local|vector|||383.57||
+mem_data_pro_agg|stem|d29e9bbd5c622326|be0f99ab9cb3476f|fcfc1d29631d591e|-1349419665||t19311.9528830058s|6a933a806e53e782|5575206|rds|local|vector|||104.36||
+mem_data_pro_agg_custom|stem|d29e9bbd5c622326|be0f99ab9cb3476f|fcfc1d29631d591e|1610152005||t19311.9701092582s|6a933a806e53e782|5575206|rds|local|vector|||104.91||
 mem_data_trip|stem|2c4edd8b9776131a|223f081e35cfd3c9|902e609a73060358|-2080473366||t19299.8889626092s|800395f2155e1d02|5245310|rds|local|vector|||39.04||
 mem_data_trip_custom|stem|c1a5bc039eca5945|9958086566e4f24b|606d522323deb320|-234814579||t19306.8339426465s|35ff9e8ca7c6af20|422490138|rds|local|vector|||1347.04||
+mem_data_unnested_links|stem|1573221961c1c24d|62c808ecae0c0945|166a05250c111bd7|-192049621||t19311.8137921155s|4e052468de0b8069|305530132|rds|local|vector|||8.22||
 mem_network|stem|7ed140dfce4e15f2|d2d87fbd49db81d5|4e3739ef91745af0|1276088418|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/memphis_req/data_queried/network_memphis_pro_20221101.gpkg|t19297.7024341872s|6c41036bca331a9d|136142848|file|local|vector|||8.64|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
+mem_network_objects_custom|stem|0c4a75f51617b09c|1f1aa0992babc55d|dc7d97cca8c1d7b8|248284320||t19311.9760285701s|48c0896b2fb6aa70|18633881|rds|local|vector|||155.13||
+mem_network_pnt|stem|cabc30bc653334c3|c9ea73fdace81223|d7417b7077484104|685378927||t19311.8302874097s|e30b7e0d9107dbe3|29842112|rds|local|vector|||125.25||
 mem_query_poly|stem|9cd9ffa4a7cb3efd|8025bfbe2580ffa3|4e3739ef91745af0|-430356782|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/memphis_req/data_for_query/split_taz_polys_pro_comb_20221103.shp|t19299.7513745732s|526d6e40b44725c2|7956048|file|local|vector|||7.38|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
 mem_query_poly_custom|stem|838f1670da72daae|6174442014a7e2a5|4e3739ef91745af0|131314495|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/memphis_req/data_for_query/custom_taz_polys_pro_comb_20221108.shp|t19304.9986959104s|118c0cbfebe1d73c|7828236|file|local|vector|||17.57|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
+process_data_aggregate|function|7b22b4991ec68fca|||||||||||||||
+process_replica_data|function|3992651d406e1494|||||||||||||||
 purrr_get_safe_results|function|7dd16a0722387d2d|||||||||||||||
 query_database|function|d5ed95e5fc01503d|||||||||||||||
 query_database_count|function|ba67deb00d5e3f90|||||||||||||||

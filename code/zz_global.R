@@ -17,7 +17,7 @@
 library(gauntlet)
 
 pkgs = c("tibble", "tidyverse", "sf", "tigris", "shiny"
-         ,"here", "DBI", "bigrquery", "htmltools"
+         ,"here", "DBI", "bigrquery", "htmltools", "data.table"
          ,"crosstalk", "leaflet", "leafem", "mapview", "gauntlet", "DT"
          ,"flexdashboard", "tarchetypes")
 

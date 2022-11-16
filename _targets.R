@@ -11,7 +11,7 @@ library(tarchetypes) # Load other packages as needed. # nolint
 
 # Set target options:
 tar_option_set(
-  packages = c("tibble", "tidyverse", "sf", "tigris", "shiny"
+  packages = c("tibble", "tidyverse", "sf", "tigris", "shiny", "data.table"
                ,"here", "DBI", "bigrquery", "htmltools"
                ,"crosstalk", "leaflet", "leafem", "gauntlet", "DT"
                ,"flexdashboard", "tarchetypes"), # packages that your targets need to run
@@ -50,6 +50,7 @@ list(
   tar_target(mem_network
              ,here("data/memphis_req/data_queried"
                    ,"network_memphis_pro_20221101.gpkg"), format = "file")
+  ,tar_target(mem_network_pnt, make_network_points(mem_network))
   # ,tar_target(mem_query_poly
   #             ,here("data/memphis_req/data_for_query"
   #                   ,"split_taz_polys_pro_comb_20221103.shp"), format = "file")
@@ -76,20 +77,16 @@ list(
               ,query_replica(data = mem_query_poly_custom 
                              ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_custom_taz"
                              ,limit = NA))
-  ,tar_target(mem_data_network_objects_custom
-              ,make_spatial_networks(
-                network = mem_network
-                ,query_poly = mem_query_poly_custom
+  ,tar_target(mem_data_unnested_links, 
+              process_replica_data(data = mem_data_trip_custom
+                                   ,query_poly = mem_query_poly_custom))
+  ,tar_target(mem_data_pro_agg_custom
+              ,process_data_aggregate(
+                query_poly = mem_query_poly_custom
                 ,data = mem_data_trip_custom))
-  ,tar_render(dashboard_memphis_origin_custom, "analysis/template_analysis_replica_origin.rmd")
-  ,tar_render(dashboard_memphis_network_agg_custom, "analysis/template_analysis_replica_network_agg.rmd")
-  ,tar_render(dashboard_memphis_origin_poly_custom, "analysis/template_analysis_replica_origin_poly.rmd")
-  # ,tar_render(report
-  #             ,"analysis/template_analysis_replica_report.rmd"
-  #             ,params = list(network = "mem_data_network_objects_custom"
-  #                            ,polys = "mem_query_poly_custom"
-  #                            ,analysis = "anl")
-  #             ,output_file = "ZZZZ.html")
+  ,tar_target(mem_network_objects_custom
+              ,make_spatial_networks(network = mem_network_pnt
+                                     ,data = mem_data_pro_agg_custom))
   ,tar_render_rep(report
                   ,"analysis/template_analysis_replica_report.rmd"
                   ,params = 
@@ -97,16 +94,23 @@ list(
                       network = c("mem_data_network_objects_custom"
                                   ,"mem_data_network_objects_custom"
                                   ,"mem_data_network_objects_custom"
-                                  ,"mem_data_network_objects_custom")
+                                  # ,"mem_data_network_objects_custom"
+                                  )
                       ,polys = c("mem_query_poly_custom"
                                  ,'mem_query_poly_custom'
                                  ,"mem_query_poly_custom"
-                                 ,'mem_query_poly_custom')
-                      ,analysis = c("anlt", "anl", "anlto", "od")
-                      ,output_file = c("analysis_customPoly_anlt.html"
-                                       ,"analysis_customPoly_anl.html"
-                                       ,"analysis_customPoly_anlt0.html"
-                                       ,"analysis_customPoly_od.html")
+                                 # ,'mem_query_poly_custom'
+                                 )
+                      ,analysis = c("anlt"
+                                    ,"anl"
+                                    ,"anlto"
+                                    # , "od"
+                      )
+                      ,output_file = c("analysis_customPoly_anlt_.html"
+                                       ,"analysis_customPoly_anl_.html"
+                                       ,"analysis_customPoly_anlto_.html"
+                                       # ,"analysis_customPoly_od.html"
+                                       )
                     )
   )
 )            
