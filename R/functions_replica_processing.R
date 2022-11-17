@@ -74,8 +74,8 @@ make_network_points = function(network){
 
 process_data_aggregate = function(network, data, query_poly, rm_self = T){
   # query_poly = tar_read('mem_query_poly')
-  # query_poly = tar_read('mem_query_poly_custom')
-  # data = tar_read('mem_data_trip_custom')
+  query_poly = tar_read('mem_query_poly_custom')
+  data = tar_read('mem_data_trip_custom')
 
   message("Preping data...")
 
@@ -100,7 +100,7 @@ process_data_aggregate = function(network, data, query_poly, rm_self = T){
             select(id, start_taz_group) %>%
             rename(end_taz_group = start_taz_group)
           ,by.x = "end_taz", by.y = "id", all = T)
-
+  
   link_unnest = data_pro %>%
     unnest(cols = network_link_ids) %>%  
     data.table() %>% 

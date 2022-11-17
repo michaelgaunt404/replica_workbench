@@ -47,6 +47,13 @@ tar_make('file_icrs')
 tar_read("file_icrs")
 
 
+yolo = tar_read("mem_data_trip_custom")
+yolo_2 = tar_read("mem_data_pro_agg_custom")
+
+
+
+
+
 #script end=====================================================================
 
 

@@ -137,7 +137,7 @@ query_poi_to_everything = function(data, db_connection, schema_table, limit = 50
   queried_data_results
 }
 
-query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, limit = 50){
+query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, temp_table, limit = 50){
   
   poly_query_df = data %>%  
     st_drop_geometry() %>% 
@@ -148,10 +148,14 @@ query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, limi
   
   query_index = poly_query_df$group %>%  
     unique() %>%  
-    sort()
+    sort() 
+  
+  
   
   queried_data = query_index %>% 
     map(~{
+      
+      x = query_index[[4]]
       
       query_focus_id = poly_query_df %>%  
         filter(group == .x) %>%  
@@ -159,54 +163,63 @@ query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, limi
         paste0("'", ., "'") %>% 
         paste(collapse = ", ") 
       
-      temp_table_name = "replica-customer._script455c3f9d5ccc9ec914f73e8a4f3cdd38d3335e74.temp_table_k_lmt_dl"
+      temp_table_name = temp_table
       
+      #i think the second one should be used
       query_string = str_glue("SELECT count(*) as count FROM `{temp_table_name}`
     WHERE start_taz IN ({query_focus_id})")
       
+      query_string = str_glue("SELECT max(index) as count FROM `{temp_table_name}`
+    WHERE start_taz IN ({query_focus_id})")
+
+      yolo2 = dbGetQuery(db_connection, query_string)
+      
       limit = query_database_count(db_connection, query_string)
       limit_k_adj = ceiling(limit/1000)
+      print(limit_k_adj)
       
       if (limit == 0){
         message(paste0("''''\nQuerying for ", .x))
         message(str_glue("There are {limit} records for this group, skipping..."))
-        
+
       } else {
-        
+
         message(paste0("''''\nQuerying for ", .x))
         message(str_glue("There are {limit} records for this group..."))
         message(str_glue("Will make {limit_k_adj} queries of 1000 records...\n\n''''"))
-        
-        temp_data = list(rep(.x, limit_k_adj)
+
+        temp_data = list(rep(x, limit_k_adj)
                          ,seq(1, limit_k_adj, 1)
-        ) %>% 
+        ) %>%
           pmap(~{
-            
+
             lim_bttm = ((.y-1)*1000)
             lim_uppr = ((.y)*1000)
-            
+
             query_string = str_glue("SELECT * FROM `{temp_table_name}`
-                                WHERE row >= {lim_bttm} AND 
+                                WHERE 
+                                start_taz IN ({query_focus_id}) AND
+                                row >= {lim_bttm} AND
                                 row < {lim_uppr};")
-            
+
             data = dbGetQuery_safe(
               db_connection
               ,query_string)
-            
+
             if ((!is.null(data$result) & is.null(data$error))==TRUE){
               message(str_glue("''''\nQuery {.y} of {limit_k_adj} successful -- {nrow(data$result)} records received..."))
             } else {
               message("Query {.y} of {limit_k_adj} unsuccessful...")
             }
-            
+
             data
           })
-        
-        temp_data %>%  
-          purrr_get_safe_results() %>%  
-          reduce(bind_rows) %>%  
+
+        temp_data %>%
+          purrr_get_safe_results() %>%
+          reduce(bind_rows) %>%
           arrange(row)
-        
+
       }
     })
   
@@ -226,11 +239,12 @@ query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, limi
   queried_data_results
 }
 
-query_replica = function(data, schema_table, limit = 50){
+query_replica = function(data, schema_table, temp_table, limit = 50){
   # data = tar_read('mem_query_poly')
   # schema_table ="wsp.south_central_2021_Q4_thursday_trip_taz"
   # data = tar_read("mem_query_poly_custom")
   # schema_table = "wsp.south_central_2021_Q4_thursday_trip_custom_taz"
+  # temp_table = "replica-customer._scripteb78f2c5e64e94ee31b960a8052922d00aa7c769.temp_table_k_lmt_dl"
   
   # browser()
 
@@ -245,6 +259,7 @@ query_replica = function(data, schema_table, limit = 50){
   queried_data =  query_poi_to_everything_k_lmt(data = data_pro
                                           ,db_connection = con
                                           ,schema_table = schema_table
+                                          ,temp_table = temp_table
                                           ,limit = limit) 
   
   queried_data

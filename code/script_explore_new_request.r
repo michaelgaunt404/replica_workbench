@@ -48,6 +48,12 @@ fclust_v1 = here("data", "memphis_req/FreightClusters_v1/FreightClusters_v1.shp"
          ,id = paste0(row_number(), "_", N)) %>%  
   select(id, name)
 
+fclust_v1 = here("data", "memphis_req/FreightClusters_v1/FreightClusters_v1.shp") %>% 
+  read_sf() %>%  
+  mutate(name = N
+         ,id = paste0(row_number(), "_", N)) %>%  
+  select(id, name)
+
 ##manual copy data====================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
