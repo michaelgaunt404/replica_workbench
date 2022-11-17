@@ -6,6 +6,7 @@
 # Load packages required to define the pipeline:
 library(targets)
 library(here)
+library(stringr)
 # library(htmltools)
 library(tarchetypes) # Load other packages as needed. # nolint
 
@@ -77,9 +78,6 @@ list(
               ,query_replica(data = mem_query_poly_custom 
                              ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_custom_taz"
                              ,limit = NA))
-  ,tar_target(mem_data_unnested_links, 
-              process_replica_data(data = mem_data_trip_custom
-                                   ,query_poly = mem_query_poly_custom))
   ,tar_target(mem_data_pro_agg_custom
               ,process_data_aggregate(
                 query_poly = mem_query_poly_custom
@@ -87,30 +85,45 @@ list(
   ,tar_target(mem_network_objects_custom
               ,make_spatial_networks(network = mem_network_pnt
                                      ,data = mem_data_pro_agg_custom))
+  ,tar_target(mem_spatial_od_polys
+              ,make_spatial_od_polys(
+                query_poly = mem_query_poly_custom
+                ,data = mem_data_pro_agg_custom
+              ))
   ,tar_render_rep(report
                   ,"analysis/template_analysis_replica_report.rmd"
                   ,params = 
                     tibble(
-                      network = c("mem_data_network_objects_custom"
-                                  ,"mem_data_network_objects_custom"
-                                  ,"mem_data_network_objects_custom"
-                                  # ,"mem_data_network_objects_custom"
-                                  )
+                      network = c("mem_network_objects_custom"
+                                  ,"mem_network_objects_custom"
+                                  ,"mem_network_objects_custom"
+                                  ,"mem_network_objects_custom"
+                      )
+                      ,od = c('mem_spatial_od_polys'
+                              ,'mem_spatial_od_polys'
+                              ,'mem_spatial_od_polys'
+                              ,'mem_spatial_od_polys'
+                              
+                      )
                       ,polys = c("mem_query_poly_custom"
-                                 ,'mem_query_poly_custom'
                                  ,"mem_query_poly_custom"
-                                 # ,'mem_query_poly_custom'
-                                 )
+                                 ,"mem_query_poly_custom"
+                                 ,"mem_query_poly_custom"
+                      )
                       ,analysis = c("anlt"
                                     ,"anl"
                                     ,"anlto"
-                                    # , "od"
+                                    ,"od"
                       )
-                      ,output_file = c("analysis_customPoly_anlt_.html"
-                                       ,"analysis_customPoly_anl_.html"
-                                       ,"analysis_customPoly_anlto_.html"
-                                       # ,"analysis_customPoly_od.html"
-                                       )
+                      ,output_file = c(here("public"
+                                            ,str_glue('analysis_customPoly_anlt_{str_remove_all(Sys.Date(), "[:punct:]")}.html'))
+                                       ,here("public"
+                                             ,str_glue('analysis_customPoly_anl_{str_remove_all(Sys.Date(), "[:punct:]")}.html'))
+                                       ,here("public"
+                                             ,str_glue('analysis_customPoly_anlto_{str_remove_all(Sys.Date(), "[:punct:]")}.html'))
+                                       ,here("public"
+                                             ,str_glue('analysis_customPoly_od_{str_remove_all(Sys.Date(), "[:punct:]")}.html'))
+                      )
                     )
   )
 )            

@@ -8,6 +8,7 @@
 #     vertical_layout: fill
 params:
   network: "mem_data_network_objects_custom"
+  od: "mem_spatial_od_polys"
   polys: "mem_query_poly_custom"
   analysis: "od"
 ---
@@ -45,6 +46,7 @@ library(sf)
 ```{r}
 params_analysis = params$analysis
 params_network = params$network
+params_od = params$od
 params_polys = params$polys
 ```
 
@@ -75,9 +77,9 @@ params_polys = params$polys
 #please add test data here so that others may use/unit test these scripts -->
 
 ```{r}
-mem_data_network_objects = tar_read_raw(params_network)
-
-mem_query_poly = tar_read_raw(params_polys)
+data_network = tar_read_raw(params_network)
+data_od = tar_read_raw(params_od)
+data_polys = tar_read_raw(params_polys)
 ```
 
 ```{r}
@@ -93,17 +95,25 @@ mem_query_poly = tar_read_raw(params_polys)
 ```{r}
 if (params_analysis == "od"){
   # print("od")
-  make_map_origin(mem_data_network_objects, mem_query_poly)
+  make_map_origin(network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
 } else if (params_analysis == "anlto"){
   # print("anlto")
-  make_network_map_anlto(mem_data_network_objects, mem_query_poly)
+  make_network_map_anlto(network_objects = data_network
+                      ,network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
 } else if (params_analysis == "anlt"){
   # print("anlt")
-  make_network_map_anlt(mem_data_network_objects, mem_query_poly)
+  make_network_map_anlt(network_objects = data_network
+                      ,network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
 } else if (params_analysis == "anl"){
   # print("anl")
-  make_network_map_anl(mem_data_network_objects, mem_query_poly)
+  make_network_map_anl(network_objects = data_network
+                      ,network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
 }
+
 ```
 
 
