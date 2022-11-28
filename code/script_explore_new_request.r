@@ -42,17 +42,21 @@ mem_taz = read_sf(here("data", "memphis_req/taz_area", "taz_area.shp")) %>%
 study_area = sel_counties %>%  
   st_union() 
 
-fclust_v1 = here("data", "memphis_req/FreightClusters_v1/FreightClusters_v1.shp") %>% 
-          read_sf() %>%  
-  mutate(name = N
-         ,id = paste0(row_number(), "_", N)) %>%  
-  select(id, name)
+sa_polys = read_rds(here('data/memphis_req/data_for_query', "study_area_polys.RDS"))
 
-fclust_v1 = here("data", "memphis_req/FreightClusters_v1/FreightClusters_v1.shp") %>% 
-  read_sf() %>%  
-  mutate(name = N
-         ,id = paste0(row_number(), "_", N)) %>%  
-  select(id, name)
+study_area = sa_polys$sel_counties %>%  st_union()
+
+# fclust_v1 = here("data", "memphis_req/FreightClusters_v1/FreightClusters_v1.shp") %>% 
+#           read_sf() %>%  
+#   mutate(name = N
+#          ,id = paste0(row_number(), "_", N)) %>%  
+#   select(id, name)
+
+# fclust_v1 = here("data", "memphis_req/FreightClusters_v1/FreightClusters_v1.shp") %>% 
+#   read_sf() %>%  
+#   mutate(name = N
+#          ,id = paste0(row_number(), "_", N)) %>%  
+#   select(id, name)
 
 ##manual copy data====================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -316,50 +320,152 @@ taz_processed %>%
 #analysis: custom poly==========================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-fclust_v1 %>%  
-  mav
+##load saved data===============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ec_clusters = here("data"
+                   ,"memphis_req/Economic Clusters_Updated_V2/FC_Combined.shp") %>% 
+  read_sf() 
 
-fclust_v1_buf = fclust_v1 %>% 
-  quick_buffer(radius = 10) %>%
-  st_difference() %>%
-  quick_buffer(radius = 10) %>%
-  st_difference() %>%
-  quick_buffer(radius = 10) %>%
-  st_difference() %>%
-  quick_buffer(radius = -30) 
+mem_taz = read_sf(here("data", "memphis_req/taz_area", "taz_area.shp")) %>%  
+  st_transform(crs = 4326) %>%  
+  select(id) 
 
-fclust_v1_buf %>%
+sa_polys = read_rds(here('data/memphis_req/data_for_query', "study_area_polys.RDS"))
+
+study_area = sa_polys$sel_counties %>%  
+  st_union() %>%  
+  st_as_sf() %>% 
+  mutate(flag_sa = "internal") %>% 
+  st_transform(4326)
+
+mem_taz_sm = mem_taz %>%
+  st_join(study_area) %>%  
+  mutate(flag_sa = replace_na(flag_sa, "external")
+         ,flag_poi = "not_poi")
+
+##buffering=====================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+buffed = ec_clusters %>% 
+  st_cast("MULTIPOLYGON") %>% #makes all same type
+  arrange(N) %>%  
+  mutate(id = str_glue("{row_number()}_{N}")) %>%
+  mutate(flag_poi = "poi") %>% 
+  mutate(group = id) %>% 
+  select(id, group, flag_poi) %>% 
+  st_difference() 
+
+buff_num = 6
+radius = 5
+for (i in 1:buff_num){
+  buffed = buffed %>% 
+    quick_buffer(radius = radius) %>%
+    st_difference()
+} 
+
+buffed = buffed %>%  
+  quick_buffer(radius = -1*buff_num*radius)
+
+##buffering and combined========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+custom_polys_sa = st_difference(
+  mem_taz_sm %>%
+    filter(flag_sa == "internal") 
+  ,st_union(buffed)) %>%  
+  bind_rows(buffed) %>% 
+  mutate(flag_sa = "internal")
+
+##buffering and combined========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#make geom type attribute
+custom_polys_sa_filter = custom_polys_sa %>%  
+  # st_filter(buffed) %>%
+  mutate(sf_geom_typ = st_geometry_type(geometry) %>%  
+           as.character())
+
+# custom_polys_sa_not_buffed = custom_polys_sa %>%  
+#   filter(!(id %in% custom_polys_sa_filter$id))
+
+message(paste0(unique(custom_polys_sa_filter$sf_geom_typ), collapse = ", "))
+
+#convert mutli-to-polygon unique ID hashing
+custom_polys_sa_filter_explode = custom_polys_sa_filter %>% 
+  filter(sf_geom_typ == "MULTIPOLYGON") %>% 
+  st_cast("POLYGON") %>%  
+  group_by(id) %>%  
+  mutate(id = str_glue("{id}_{row_number()}")) %>%  
+  ungroup() 
+
+custom_polys_sa_poly_only = bind_rows(
+  custom_polys_sa_filter %>%  
+    filter(sf_geom_typ != "MULTIPOLYGON") 
+  ,custom_polys_sa_filter_explode
+  # ,custom_polys_sa_not_buffed
+  ) %>% 
+  mutate(sf_geom_typ = st_geometry_type(geometry) %>%  
+           as.character())
+
+unique(custom_polys_sa_poly_only$sf_geom_typ)
+
+custom_polys_sa_poly_only %>%  
+  # filter(str_detect(id, "_")) %>%  
   mapview()
-
-mapview(mem_bg_sm) + mapview(fclust_v1)
-i = 9
-test = mem_bg_sm
-for (i in 1:nrow(fclust_v1)){
-  print(i)
-  test = st_difference(test, fclust_v1[i,])
   
-}
- 
-differenced = st_difference(mem_taz_sm, st_union(fclust_v1_buf)) %>%  
-  select(id, name) %>%  
-  mutate(flag_target = "f") %>% 
-  st_collection_extract("POLYGON")
 
-differenced %>%  st_collection_extract("POLYGON")
+# custom_polys_sa_filter_explode_sf =  custom_polys_sa_filter_explode %>%  
+#   group_by(id) %>%  
+#   nest() %>%  
+#   mutate(bb_box = map(data, ~st_bbox(.x) %>%
+#                         st_as_sfc() %>%
+#                         st_area() %>%  
+#                         as.numeric())) %>%  
+#   unnest(c("data", "bb_box")) %>%
+#   ungroup() %>%
+#   mutate(area = as.numeric(st_area(geometry))
+#          ,area_1 = area < 50) %>% 
+#   mutate(ratio = area/bb_box
+#          ,ratio_1 = (bb_box/area)
+#          ,ratio_2 = (bb_box/area)>5) %>%
+#   mutate(flag_abosrb = )
+#   st_as_sf() %>%  
+#   st_cast("POLYGON")
+
+bolo = custom_polys_sa_filter %>%  
+  filter(sf_geom_typ != "MULTIPOLYGON") %>% 
+  bind_rows(custom_polys_sa_filter_explode_sf)
+
+mapview(bolo, zcol = "area_1", burst = T)
   
-differenced %>% mapview()
+##check=========================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-test = rbind(differenced, 
-             fclust_v1_buf %>%  
-        mutate(flag_target = "t"))
+bind_rows(
+  custom_polys_sa_not_buffed
+  ,custom_polys_sa_poly_only
+)
 
-test %>%  
-  write_sf(here("data/memphis_req/custom_taz_polys/custom_taz_polys.shp"))
+##write and save================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-merged = read_sf(here("data/memphis_req/custom_taz_polys/custom_taz_polys.shp"))
-  
-merged %>%  
-  mapview(zcol = "flg_trg")
+write_sf(custom_polys_sa_poly_only
+         ,here("data/memphis_req/data_for_query"
+               ,str_glue('study_area_custom_polys_20221121.gpkg')
+         )
+)
+
+ddd = here("data/memphis_req/data_for_query"
+            ,str_glue('study_area_custom_polys_20221121.gpkg')
+) %>%  
+  read_sf()
+
+ddd %>%  
+  filter(str_detect(group, "_"))
+
+mapview(ddd, zcol = "flag_poi") + mapview(sa_polys$sel_states)
+
+##buffering=====================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 
 ##load saved data===============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

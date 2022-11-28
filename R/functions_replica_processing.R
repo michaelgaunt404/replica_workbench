@@ -72,6 +72,36 @@ make_network_points = function(network){
     st_true_midpoint()
 }
 
+data_converage = function(data){
+  # query_poly = tar_read('mem_query_poly')
+  # query_poly = tar_read('mem_query_poly_custom')
+  # data = tar_read('mem_data_trip_custom')
+  
+  data_coords = data %>%
+    select(contains(c("lat", "lng"))) %>%  
+    mutate(count = 1)
+  x= "origin"
+  c("origin"
+    ,"destination") %>%  
+    map(~{
+      
+      data_coords %>%  
+        select(contains(.x)) %>%  
+        set_names(c("lat", "lng")) %>%  
+        count(lat, lng) %>%  
+        st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%  
+        mapview()
+      
+    })
+  
+
+  
+  data_coords = data %>%
+    select(contains(c("lat", "lng"))) %>%  
+    select
+}
+
+
 process_data_aggregate = function(network, data, query_poly, rm_self = T){
   # query_poly = tar_read('mem_query_poly')
   query_poly = tar_read('mem_query_poly_custom')
@@ -81,24 +111,30 @@ process_data_aggregate = function(network, data, query_poly, rm_self = T){
 
   query_poly = query_poly %>%
     read_sf()
-
+  
   query_poly_df = query_poly %>%
-    st_drop_geometry() %>%
+    st_drop_geometry()
+
+  query_poly_df_poi = query_poly_df %>%
     filter(flag_poi == "poi") %>%
     rename(start_taz_group = group)
+  
+  query_poly_df_notpoi = query_poly_df %>%
+    rename(end_taz_group = group)
 
   data_pro = data %>%
     mutate(count = 1) %>%
     mutate(dataset = "wsp.south_central_2021_Q4_thursday_trip_custom_taz") %>%
     select(c('dataset', 'activity_id', 'start_taz'
              ,'end_taz', 'vehicle_type', 'network_link_ids', 'count')) %>%
-    {if (rm_self) (.) %>%  filter(start_taz != end_taz) else .} %>%
-    merge(., query_poly_df %>%
+    # {if (rm_self) (.) %>%  filter(start_taz != end_taz) else .} %>%
+    merge(., query_poly_df_poi %>%
             select(id, start_taz_group)
           ,by.x = "start_taz", by.y = "id") %>%
-    merge(., query_poly_df %>%
-            select(id, start_taz_group) %>%
-            rename(end_taz_group = start_taz_group)
+    merge(., query_poly_df_notpoi %>%
+            select(id, end_taz_group, flag_sa,  flag_poi) %>%
+            rename(flag_sa_end = flag_sa
+                   ,flag_poi_end = flag_poi)
           ,by.x = "end_taz", by.y = "id", all = T)
   
   link_unnest = data_pro %>%

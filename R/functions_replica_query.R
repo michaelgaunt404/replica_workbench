@@ -80,13 +80,13 @@ query_database = function(db_connection, query_string, query_item, dataset){
 
 query_database_safe = purrr::safely(query_database)
 
-query_database_count = function(db_connection, query_string){
+# query_database_count = function(db_connection, query_string){
   temp = dbGetQuery(db_connection, query_string)
 
   temp[[1]]
 }
 
-query_poi_to_everything = function(data, db_connection, schema_table, limit = 50){
+# query_poi_to_everything = function(data, db_connection, schema_table, limit = 50){
   
   limit_query = ifelse(is.na(limit), ";", str_glue("limit {limit};"))
   
@@ -147,15 +147,12 @@ query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, temp
   message("Begining query...")
   
   query_index = poly_query_df$group %>%  
-    unique() %>%  
-    sort() 
-  
-  
+    unique() 
   
   queried_data = query_index %>% 
     map(~{
       
-      x = query_index[[4]]
+      # x = query_index[[1]]
       
       query_focus_id = poly_query_df %>%  
         filter(group == .x) %>%  
@@ -164,31 +161,28 @@ query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, temp
         paste(collapse = ", ") 
       
       temp_table_name = temp_table
-      
-      #i think the second one should be used
-      query_string = str_glue("SELECT count(*) as count FROM `{temp_table_name}`
-    WHERE start_taz IN ({query_focus_id})")
-      
-      query_string = str_glue("SELECT max(index) as count FROM `{temp_table_name}`
+
+      query_string = str_glue(
+        "SELECT max(index) as count FROM `{temp_table_name}`
     WHERE start_taz IN ({query_focus_id})")
 
-      yolo2 = dbGetQuery(db_connection, query_string)
-      
-      limit = query_database_count(db_connection, query_string)
-      limit_k_adj = ceiling(limit/1000)
-      print(limit_k_adj)
+      limit = dbGetQuery(db_connection, query_string)
+      limit_k_adj = ceiling(limit[[1]]/1000)
+
+      #can make a limit if else statement here
+      # limit_k_adj = 1
       
       if (limit == 0){
-        message(paste0("''''\nQuerying for ", .x))
+        message(paste0("''''\nQuerying for ", query_focus_id))
         message(str_glue("There are {limit} records for this group, skipping..."))
 
       } else {
 
-        message(paste0("''''\nQuerying for ", .x))
+        message(paste0("=====\n\nQuerying for ", .x))
         message(str_glue("There are {limit} records for this group..."))
-        message(str_glue("Will make {limit_k_adj} queries of 1000 records...\n\n''''"))
+        message(str_glue("Will make {limit_k_adj} queries of 1000 records...\n\n====="))
 
-        temp_data = list(rep(x, limit_k_adj)
+        temp_data = list(rep(.x, limit_k_adj) 
                          ,seq(1, limit_k_adj, 1)
         ) %>%
           pmap(~{
@@ -198,18 +192,19 @@ query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, temp
 
             query_string = str_glue("SELECT * FROM `{temp_table_name}`
                                 WHERE 
-                                start_taz IN ({query_focus_id}) AND
-                                row >= {lim_bttm} AND
-                                row < {lim_uppr};")
-
+                                start_taz IN ('{.x}') AND
+                                index >= {lim_bttm} AND
+                                index < {lim_uppr};")
+            
             data = dbGetQuery_safe(
               db_connection
               ,query_string)
 
-            if ((!is.null(data$result) & is.null(data$error))==TRUE){
-              message(str_glue("''''\nQuery {.y} of {limit_k_adj} successful -- {nrow(data$result)} records received..."))
+            if ((!is.null(data$result) & 
+                 is.null(data$error))==TRUE){
+              message(str_glue("=====\nQuery {.y} of {limit_k_adj} successful -- {nrow(data$result)} records received...\n\n====="))
             } else {
-              message("Query {.y} of {limit_k_adj} unsuccessful...")
+              message(str_glue("Query {.y} of {limit_k_adj} unsuccessful..."))
             }
 
             data
@@ -218,7 +213,7 @@ query_poi_to_everything_k_lmt = function(data, db_connection, schema_table, temp
         temp_data %>%
           purrr_get_safe_results() %>%
           reduce(bind_rows) %>%
-          arrange(row)
+          arrange(index)
 
       }
     })
@@ -256,11 +251,13 @@ query_replica = function(data, schema_table, temp_table, limit = 50){
     dataset = schema_table
   )
   
-  queried_data =  query_poi_to_everything_k_lmt(data = data_pro
-                                          ,db_connection = con
-                                          ,schema_table = schema_table
-                                          ,temp_table = temp_table
-                                          ,limit = limit) 
+  queried_data =  query_poi_to_everything_k_lmt(
+    data = data_pro
+    ,db_connection = con
+    ,schema_table = schema_table
+    ,temp_table = temp_table
+    ,limit = limit
+  ) 
   
   queried_data
 }

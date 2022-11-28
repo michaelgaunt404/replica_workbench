@@ -1,0 +1,47 @@
+#chunk_1~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#========================================================================================
+#makes temp table
+#makes index attribute - each trip (unique activity) should be numbered 1-max for start_taz
+BEGIN
+CREATE TEMP TABLE temp_table_k_lmt_dl as 
+SELECT
+activity_id
+,start_taz, origin_bgrp, origin_bgrp_lat, origin_bgrp_lng
+,end_taz,destination_bgrp_lat, destination_bgrp_lng, destination_bgrp
+,vehicle_type, start_time, end_time, distance_miles, network_link_ids
+,ROW_NUMBER () OVER (PARTITION BY start_taz) index
+    FROM `wsp.south_central_2021_Q4_thursday_trip_custom_taz`
+    WHERE mode = 'COMMERCIAL' and
+    REGEXP_CONTAINS(start_taz, '_') = TRUE; ------look at this argument
+end;
+
+
+#chunk_2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#========================================================================================
+#checks for unique index/activity_id
+
+#list of start locations
+select distinct start_taz FROM `replica-customer._script25786380456a801dfb962e82f9f96b037012d3c5.temp_table_k_lmt_dl`
+#list of destination lat and long
+select distinct destination_bgrp_lat, destination_bgrp_lng FROM `replica-customer._script25786380456a801dfb962e82f9f96b037012d3c5.temp_table_k_lmt_dl`
+#list of destination block groups
+select distinct destination_bgrp FROM `replica-customer._script25786380456a801dfb962e82f9f96b037012d3c5.temp_table_k_lmt_dl`
+
+
+#check max index 
+select start_taz, max(index) as max_index 
+FROM `replica-customer._script25786380456a801dfb962e82f9f96b037012d3c5.temp_table_k_lmt_dl` 
+group by start_taz
+order by max_index desc;
+
+#check count - should be the same as the above
+
+select start_taz, count(*) as count 
+from (select distinct start_taz, activity_id 
+FROM `replica-customer._script25786380456a801dfb962e82f9f96b037012d3c5.temp_table_k_lmt_dl`) 
+group by start_taz
+order by count desc;
+
+
+
+ 

@@ -73,10 +73,11 @@ list(
   ##Memphis: Custom polys-----
   ,tar_target(mem_query_poly_custom
               ,here("data/memphis_req/data_for_query"
-                    ,"custom_taz_polys_pro_comb_20221108.shp"), format = "file")
+                    ,"study_area_custom_polys_20221121.gpkg"), format = "file")
   ,tar_target(mem_data_trip_custom
               ,query_replica(data = mem_query_poly_custom 
                              ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_custom_taz"
+                             ,temp_table = "replica-customer._script25786380456a801dfb962e82f9f96b037012d3c5.temp_table_k_lmt_dl"
                              ,limit = NA))
   ,tar_target(mem_data_pro_agg_custom
               ,process_data_aggregate(
