@@ -4,6 +4,7 @@ block_groups|object|66aa2f67513dab8d|||||||||||||||
 clusters|object|1beb5cedec9a45ed|||||||||||||||
 count_percent_zscore_dt|function|3b9f061202a3e5f6|||||||||||||||
 data_bg_clust|function|c304b86a31c2c8ad|||||||||||||||
+data_converage|function|ae86dfc955e68019|||||||||||||||
 dbGetQuery_safe|function|00758262fad8ce25|||||||||||||||
 get_block_groups|function|8159943efbca17e6|||||||||||||||
 get_block_groups_manual|function|390d22c46581dc6f|||||||||||||||
@@ -11,32 +12,38 @@ get_block_groups_selected_od|function|390d22c46581dc6f|||||||||||||||
 get_manual_cluster|function|4348bdad7a876295|||||||||||||||
 get_replica_network|function|3191a1220f102c32|||||||||||||||
 make_map_origin|function|8db4247ca04c56df|||||||||||||||
+make_network_links|function|4bc260eb40e359a3|||||||||||||||
 make_network_map_|function|f2f093645f665f1f|||||||||||||||
 make_network_map_anl|function|daad70fa6971714e|||||||||||||||
 make_network_map_anlt|function|027d1c2581ab68d6|||||||||||||||
 make_network_map_anlto|function|82a3385bfc03ae50|||||||||||||||
 make_network_maps|function|587542a3165ac7fa|||||||||||||||
-make_network_points|function|3299e4a41a4f588c|||||||||||||||
+make_network_points|function|72f905871c062d9c|||||||||||||||
 make_nezzzz|function|179dd26c5cebba44|||||||||||||||
 make_spatial_networks|function|7ef809ef214b4456|||||||||||||||
 make_spatial_od_polys|function|5426ee8c1215e5df|||||||||||||||
 mem_data_pro_agg_custom|stem|25bd0597f50e4df3|be0f99ab9cb3476f|d648cef278277e21|1610152005||t19318.9869119708s|15cc1b8991bbb42d|8085901|rds|local|vector|||256.4||
 mem_data_trip_custom|stem|fd23882fb088a7c0|2a5deb8e30c7dbef|75db961f24715140|-234814579||t19318.9734961619s|2379c3a3696bbcda|121524345|rds|local|vector|||542.88||
+mem_data_trip_split|stem|f5ca125e1f60a97d|ef7159b8f311d29c|46a44f9ea982a5ba|-1178834234||t19325.9213311582s|8d5e6dec2bb6c94f|7381054|rds|local|vector|||113.59||
+mem_data_trip_split_1|stem||ca6dbae921861e66|7b22551d41431dad|1779009537||t19325.8730229874s||0|rds|local|vector|||39.31||1m22mArgument 1 must have names.
 mem_network|stem|7ed140dfce4e15f2|d2d87fbd49db81d5|4e3739ef91745af0|1276088418|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/memphis_req/data_queried/network_memphis_pro_20221101.gpkg|t19297.7024341872s|6c41036bca331a9d|136142848|file|local|vector|||8.64|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
+mem_network_lnk|stem|f02d8803f0687cd9|e9228963a6961c0d|c56b7f1ef7a1f156|-1803582704||t19324.8447995023s|ee5351ccf74fb6ca|42440608|rds|local|vector|||8.78||
 mem_network_objects_custom|stem|739bef947802424d|1f1aa0992babc55d|15cd97621ea215e8|248284320||t19318.9889194536s|1f0b08a518b7f112|18700609|rds|local|vector|||167.29||
 mem_network_pnt|stem|cabc30bc653334c3|c9ea73fdace81223|d7417b7077484104|685378927||t19311.8302874097s|e30b7e0d9107dbe3|29842112|rds|local|vector|||125.25||
 mem_query_poly_custom|stem|15cc3743af96b56a|2c1558441ffd0128|4e3739ef91745af0|131314495|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/memphis_req/data_for_query/study_area_custom_polys_20221121.gpkg|t19317.9957719786s|1f2491d52c007327|9510912|file|local|vector|||7.61|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
+mem_query_poly_split|stem|9cd9ffa4a7cb3efd|8025bfbe2580ffa3|4e3739ef91745af0|-1115936182|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/memphis_req/data_for_query/split_taz_polys_pro_comb_20221103.shp|t19299.7513745732s|526d6e40b44725c2|7956048|file|local|vector|||7.34|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
 mem_spatial_od_polys|stem|f4a2bd3a1275bc82|675ef7034dca23f8|ec8507c8af69c94d|-273274491||t19318.9889483313s|1c3dae8ecd2236ca|15914769|rds|local|vector|||0.31||
-process_data_aggregate|function|2a87573282baabd8|||||||||||||||
+process_data_aggregate|function|553c63dc8561a597|||||||||||||||
 process_replica_data|function|3992651d406e1494|||||||||||||||
 purrr_get_safe_results|function|7dd16a0722387d2d|||||||||||||||
 query_database|function|d5ed95e5fc01503d|||||||||||||||
 query_database_count|function|ba67deb00d5e3f90|||||||||||||||
 query_database_safe|function|00758262fad8ce25|||||||||||||||
 query_poi_to_everything|function|8c43ae1bbf044437|||||||||||||||
-query_poi_to_everything_k_lmt|function|abb929e03a76e525|||||||||||||||
+query_poi_to_everything_k_lmt|function|178a9bcc6710c2f4|||||||||||||||
 query_poi_to_everything_safe|function|00758262fad8ce25|||||||||||||||
-query_replica|function|70a800f899137f4f|||||||||||||||
+query_replica|function|74f9bcbee6d9d902|||||||||||||||
+query_replica_old|function|7f9295eb8396d915|||||||||||||||
 query_trip_info|function|e11b214730240036|||||||||||||||
 report|pattern|019d8535eb8b020d|cffdd4c6f5932912||-237041703||||161109944|file|local|vector||report_3f3543b8*report_60e37c5b*report_7c551ac4*report_66521a0f|412.55||
 report_024026cc|branch|a0b29bd383aff10a|cffdd4c6f5932912|4e26d960f295b7a1|-1879184247|analysis/analysis_customPoly_anl_20221116_.html*analysis/template_analysis_replica_report.rmd|t19313.0301729642s|b4d60c095966205f|22397485|file|local|vector|report||36.06||

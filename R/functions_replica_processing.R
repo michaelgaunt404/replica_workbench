@@ -33,6 +33,30 @@
 #area to upload data with and to perform initial munging
 #please add test data here so that others may use/unit test these scripts
 
+count_percent_zscore_dt = function(data, grp_c = ..., grp_p = ..., grp_z = ...,
+                                   col, prefix = NULL, rnd = NULL, cntr_scl = FALSE){
+  
+  tmp = data %>%
+    data.table::data.table() %>%
+    .[,.(count = sum(.SD)), .SDcols = col, by = grp_c] %>%
+    .[,`:=`(percent = (count/sum(count)) %>%
+              { if (!is.null(rnd)) round(., rnd) else .}), by = grp_p] %>%
+    { if (cntr_scl) (.) %>%
+        .[,`:=`(zscore = as.vector(scale(count))), by = grp_z]
+      else .}
+  
+  if (is.null(prefix)){
+    tmp = tmp
+  } else {
+    newname1 = str_glue("{prefix}_count")
+    newname2 = str_glue("{prefix}_percent")
+    rename(tmp, !!newname1 := count, !!newname2 := percent)
+  }
+  
+  return(tmp)
+  
+}
+
 #data prep and query============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 get_replica_network = function(query_data, schema_table, limit = 25
@@ -64,12 +88,20 @@ get_replica_network = function(query_data, schema_table, limit = 25
 }
 
 make_network_points = function(network){
-  network = tar_read('mem_network')
+  # network = tar_read('mem_network')
   
   network %>%  
     read_sf() %>% 
     mutate(stableEdgeId_trunc = str_trunc(stableEdgeId, 14, "right", "")) %>%  
     st_true_midpoint()
+}
+
+make_network_links = function(network){
+  # network = tar_read('mem_network')
+  
+  network %>%  
+    read_sf() %>% 
+    mutate(stableEdgeId_trunc = str_trunc(stableEdgeId, 14, "right", "")) 
 }
 
 data_converage = function(data){
@@ -101,11 +133,16 @@ data_converage = function(data){
     select
 }
 
-
-process_data_aggregate = function(network, data, query_poly, rm_self = T){
+process_data_aggregate = function(network, data, query_poly
+                                  ,rm_self = T, rm_ext = T){
   # query_poly = tar_read('mem_query_poly')
-  query_poly = tar_read('mem_query_poly_custom')
-  data = tar_read('mem_data_trip_custom')
+  # query_poly = tar_read('mem_query_poly_custom')
+  # data = tar_read('mem_data_trip_custom')
+  
+  #TODO: function should be able to process data to external locations
+  #---ideally should tell what percentage of link trips area to external locations
+  #---i really don't know what that will get you but we should think about it in the future
+  #---assume taz locations on the edge would have more percent of external trips
 
   message("Preping data...")
 
@@ -124,18 +161,22 @@ process_data_aggregate = function(network, data, query_poly, rm_self = T){
 
   data_pro = data %>%
     mutate(count = 1) %>%
-    mutate(dataset = "wsp.south_central_2021_Q4_thursday_trip_custom_taz") %>%
+    mutate(dataset = "south_central_2021_Q4_thursday") %>%
     select(c('dataset', 'activity_id', 'start_taz'
              ,'end_taz', 'vehicle_type', 'network_link_ids', 'count')) %>%
-    # {if (rm_self) (.) %>%  filter(start_taz != end_taz) else .} %>%
     merge(., query_poly_df_poi %>%
             select(id, start_taz_group)
-          ,by.x = "start_taz", by.y = "id") %>%
+          ,by.x = "start_taz", by.y = "id") %>% 
     merge(., query_poly_df_notpoi %>%
-            select(id, end_taz_group, flag_sa,  flag_poi) %>%
-            rename(flag_sa_end = flag_sa
-                   ,flag_poi_end = flag_poi)
-          ,by.x = "end_taz", by.y = "id", all = T)
+            select(id, end_taz_group, flag_poi) %>%
+            rename(flag_poi_end = flag_poi)
+          ,by.x = "end_taz", by.y = "id", all = T) %>%  
+    mutate(flag_sa_end = case_when(end_taz %in% unique(query_poly$id)~"internal"
+                                   ,T~"external")
+           ,end_taz = case_when(end_taz %in% unique(query_poly$id)~end_taz
+                                ,T~"out of study area")) %>% 
+    {if (rm_self) (.) %>%  filter(start_taz != end_taz) else .} %>%  
+    {if (rm_ext) (.) %>%  filter(flag_sa_end != 'external') else .}
   
   link_unnest = data_pro %>%
     unnest(cols = network_link_ids) %>%  
@@ -149,9 +190,10 @@ process_data_aggregate = function(network, data, query_poly, rm_self = T){
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   agg_network_link = link_unnest %>%
     count_percent_zscore_dt(
-      grp_c = c('dataset', 'network_link_ids_trunc')
-      ,grp_p = c('dataset')
-      ,col = 'count')
+      grp_c = c('dataset', 'network_link_ids_trunc', 'flag_sa_end')
+      ,grp_p = c('dataset', 'network_link_ids_trunc')
+      ,col = 'count') %>%  
+    .[order(-count)] 
   
   message("Link aggregations complete...")
 
@@ -165,8 +207,8 @@ process_data_aggregate = function(network, data, query_poly, rm_self = T){
     .[,`:=`(count_pRank_adj = dgt2(percent_rank(count))
             ,count_adj_max = dgt2(count/max(count)))
       ,by = .(dataset, vehicle_type)] %>% 
-  .[,`:=`(ttl_count_link = sum(count)), by = .(network_link_ids_trunc)] %>% 
-  .[,`:=`(ttl_count_link_type = sum(count)), by = .(vehicle_type)] %>%  
+    .[,`:=`(ttl_count_link = sum(count)), by = .(network_link_ids_trunc)] %>% 
+    .[,`:=`(ttl_count_link_type = sum(count)), by = .(vehicle_type)] %>%  
     data.frame() %>%  
     mutate(label = str_glue(
       "Link: {network_link_ids_trunc}
@@ -259,7 +301,8 @@ process_data_aggregate = function(network, data, query_poly, rm_self = T){
     count_percent_zscore_dt(grp_c = c("start_taz", "vehicle_type")
                             ,grp_p = c("start_taz")
                             ,col = 'count'
-                            ,rnd = 2) %>%  .[order(start_taz, vehicle_type)] %>% 
+                            ,rnd = 2) %>%  
+    .[order(start_taz, vehicle_type)] %>% 
     .[,`:=`(count_ttl_veh = sum(count)), by = .(vehicle_type)] %>% 
     .[,`:=`(count_tll_origin = sum(count)), by = .(start_taz)] %>% 
     .[,`:=`(vehicle_type = ifelse(str_detect(vehicle_type, "HEAVY"), "heavy", "medium"))] %>% 

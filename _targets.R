@@ -51,14 +51,23 @@ list(
   tar_target(mem_network
              ,here("data/memphis_req/data_queried"
                    ,"network_memphis_pro_20221101.gpkg"), format = "file")
-  ,tar_target(mem_network_pnt, make_network_points(mem_network))
-  # ,tar_target(mem_query_poly
-  #             ,here("data/memphis_req/data_for_query"
-  #                   ,"split_taz_polys_pro_comb_20221103.shp"), format = "file")
-  # ,tar_target(mem_data_trip
-  #             ,query_replica(data = mem_query_poly 
-  #                            ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_taz"
-  #                            ,limit = NA))
+  ,tar_target(mem_network_pnt
+              ,make_network_points(mem_network))
+  ,tar_target(mem_network_lnk
+              ,make_network_links(mem_network))
+  ##Memphis: Split polys-----
+  ,tar_target(mem_query_poly_split
+              ,here("data/memphis_req/data_for_query"
+                    ,"split_taz_polys_pro_comb_20221103.shp"), format = "file")
+  # ,tar_target(mem_data_trip_split_1
+  #             ,query_replica_old(data = mem_query_poly_split
+  #                                ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_taz"
+  #                                ,limit = NA))
+  ,tar_target(mem_data_trip_split
+              ,query_replica(data = mem_query_poly_split
+                             ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_taz"
+                             ,temp_table = "replica-customer._scriptb4a7a41bd4593d48830aae9b450c1a7d04fae34b.temp_table_k_lmt_dl"
+                             ,limit = NA))
   # ,tar_target(mem_data_network_objects
   #             ,make_spatial_networks(
   #               network = mem_network
