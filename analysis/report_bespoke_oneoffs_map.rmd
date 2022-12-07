@@ -1,0 +1,147 @@
+---
+# title: "Title"
+# subtitle: "Subtitle"
+# author: "Name"
+# date: "`r Sys.Date()`"
+# output: 
+#   html_document:
+#     toc: TRUE
+#     toc_float:
+#       collapsed: true
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 95vw;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE, cache.lazy = FALSE, autodep = TRUE, warning = FALSE, 
+  message = FALSE, echo = TRUE, dpi = 180,
+  fig.width = 8, fig.height = 5, echo = FALSE
+  )
+```
+
+<!--#general comments===========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This is [[insert description here - what it does/solve]]
+#
+# By: mike gaunt, michael.gaunt@wsp.com
+#
+# README: [[insert brief readme here]]
+#-------- [[insert brief readme here]]
+#
+# *please use 80 character margins
+# *please go to https://pkgs.rstudio.com/flexdashboard/articles/layouts.html
+# to explore the different layouts available for the flexdashboard framework
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+<!--#library set-up=============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+```{r}
+library(tidyverse)
+library(mapview)
+library(tigris)
+library(here)
+library(sf)
+```
+
+<!--#source helpers/utilities===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+<!--#source data================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev 
+#area to upload data with and to perform initial munging
+#please add test data here so that others may use/unit test these scripts -->
+```{r}
+
+##network data----
+file_location = "data/memphis_req/data_queried_network"
+sa_motorway_network = here(str_glue("{file_location}/sa_motorway_network.rds")) %>%  readRDS()
+sa_primary_network = here(str_glue("{file_location}/sa_primary_network.rds")) %>%  readRDS()
+sa_secondary_network = here(str_glue("{file_location}/sa_secondary_network.rds")) %>%  readRDS()
+sa_tertiary_network = here(str_glue("{file_location}/sa_tertiary_network.rds")) %>%  readRDS()
+sa_trunk_network = here(str_glue("{file_location}/sa_trunk_network.rds")) %>%  readRDS()
+
+# list(sa_motorway_network
+#      ,sa_primary_network
+#      ,sa_secondary_network
+#      ,sa_tertiary_network
+#      ,sa_trunk_network) %>%
+#   map(~count(.x, highway))
+
+# feature_1 = mapedit::drawFeatures() %>%
+#   st_transform(4326)
+
+# saveRDS(feature_1, here("data/memphis_req/feature.rds"))
+feature_1 = readRDS(here("data/memphis_req/feature.rds"))
+
+network_lnk = list(
+  sa_motorway_network
+  ,sa_primary_network
+  ,sa_secondary_network
+  ,sa_tertiary_network
+  ,sa_trunk_network
+) %>%  
+map(~.x %>% 
+      st_as_sf(wkt = "geometry", crs = 4326) %>%  
+      st_filter(feature_1))
+
+
+map = (
+  mapview(network_lnk[[1]], layer.name = "sa_motorway_network"
+          ,label = 'streetName', color = "red", homebutton = F) + 
+    mapview(network_lnk[[2]], layer.name = "sa_trunk_network"
+            ,label = 'streetName',  color = "black", homebutton = F)  + 
+    mapview(network_lnk[[3]], layer.name = "sa_primary_network", 
+            label = 'streetName',  color = "blue", homebutton = F) + 
+    mapview(network_lnk[[4]], layer.name = "sa_secondary_network"
+            ,label = 'streetName',  color = "orange", homebutton = F) + 
+    mapview(network_lnk[[5]], layer.name = "sa_tertiary_network", 
+            label = 'streetName',  color = "purple", homebutton = F)
+)
+
+```
+
+
+<!--#SECTION NAME===============================================================
+#use this header to make demarcations/section in code [delete this line]
+#short description -->
+
+<!-- # Header -->
+
+<!-- ## Header -->
+
+<!-- ### Header -->
+
+<!-- #### Header -->
+
+<!-- <details> -->
+<!-- <summary>Click to Expand</summary> -->
+
+<!-- Example of expandable box.  -->
+
+```{r}
+map@map %>%  
+  leaflet::hideGroup(c("sa_primary_network", "sa_secondary_network"))
+```
+
+
+
+
+<!--end-->
+
+
+
+
+
+

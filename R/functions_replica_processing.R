@@ -126,11 +126,46 @@ data_converage = function(data){
       
     })
   
-
-  
   data_coords = data %>%
     select(contains(c("lat", "lng"))) %>%  
     select
+}
+
+process_trip_data = function(network, data, query_poly
+                                  ,rm_self = T, rm_ext = T){
+  message("Preping data...")
+  
+  query_poly = query_poly %>%
+    read_sf()
+  
+  query_poly_df = query_poly %>%
+    st_drop_geometry()
+  
+  query_poly_df_poi = query_poly_df %>%
+    filter(flag_poi == "poi") %>%
+    rename(start_taz_group = group)
+  
+  query_poly_df_notpoi = query_poly_df %>%
+    rename(end_taz_group = group)
+  
+  yolo = data %>%
+    mutate(count = 1) %>%
+    mutate(dataset = "south_central_2021_Q4_thursday") %>%
+    select(c('dataset', 'activity_id', 'start_taz'
+             ,'end_taz', 'vehicle_type', 'network_link_ids', 'count')) %>%
+    merge(., query_poly_df_poi %>%
+            select(id, start_taz_group)
+          ,by.x = "start_taz", by.y = "id") %>% 
+    merge(., query_poly_df_notpoi %>%
+            select(id, end_taz_group, flag_poi) %>%
+            rename(flag_poi_end = flag_poi)
+          ,by.x = "end_taz", by.y = "id", all = T) %>%  
+    mutate(flag_sa_end = case_when(end_taz %in% unique(query_poly$id)~"internal"
+                                   ,T~"external")
+           ,end_taz = case_when(end_taz %in% unique(query_poly$id)~end_taz
+                                ,T~"out of study area")) %>% 
+    {if (rm_self) (.) %>%  filter(start_taz != end_taz) else .} %>%  
+    {if (rm_ext) (.) %>%  filter(flag_sa_end != 'external') else .}
 }
 
 process_data_aggregate = function(network, data, query_poly

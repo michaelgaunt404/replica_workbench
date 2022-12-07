@@ -24,6 +24,7 @@ make_spatial_networks|function|7ef809ef214b4456|||||||||||||||
 make_spatial_od_polys|function|5426ee8c1215e5df|||||||||||||||
 mem_data_pro_agg_custom|stem|25bd0597f50e4df3|be0f99ab9cb3476f|d648cef278277e21|1610152005||t19318.9869119708s|15cc1b8991bbb42d|8085901|rds|local|vector|||256.4||
 mem_data_trip_custom|stem|fd23882fb088a7c0|2a5deb8e30c7dbef|75db961f24715140|-234814579||t19318.9734961619s|2379c3a3696bbcda|121524345|rds|local|vector|||542.88||
+mem_data_trip_custom_0219|stem|cb51831b7429c4e1|09203686a84049b7|61744601f694ec7c|-272399662||t19331.9193270823s|8b849b6f4318858d|152478331|rds|local|vector|||645.75||
 mem_data_trip_split|stem|f5ca125e1f60a97d|ef7159b8f311d29c|46a44f9ea982a5ba|-1178834234||t19325.9213311582s|8d5e6dec2bb6c94f|7381054|rds|local|vector|||113.59||
 mem_data_trip_split_1|stem||ca6dbae921861e66|7b22551d41431dad|1779009537||t19325.8730229874s||0|rds|local|vector|||39.31||1m22mArgument 1 must have names.
 mem_network|stem|7ed140dfce4e15f2|d2d87fbd49db81d5|4e3739ef91745af0|1276088418|C:/Users/USMG687637/Documents/051_projects/zz_replica_data/data/memphis_req/data_queried/network_memphis_pro_20221101.gpkg|t19297.7024341872s|6c41036bca331a9d|136142848|file|local|vector|||8.64|package tibble was built under R version 4.1.3. package tidyverse was built under R version 4.1.3. package ggplot2 was built under R version 4.1.3. package tidyr was built under R version 4.1.3. package readr was built under R version 4.1.3. package dplyr was built under R version 4.1.3. package forcats was built under R version 4.1.1. package sf was built under R version 4.1.1. package tigris was built under R version 4.1.3. package shiny was built under R version 4.1.3. package DBI was built under R version 4.1.3. package htmltools was built under R version 4.1.1. package crosstalk was built under R version 4.1.3. package leaflet was built under R version 4.1.3. package leafem was built under R version 4.1.3. package DT was built under R version 4.1.3|
@@ -35,6 +36,7 @@ mem_query_poly_split|stem|9cd9ffa4a7cb3efd|8025bfbe2580ffa3|4e3739ef91745af0|-11
 mem_spatial_od_polys|stem|f4a2bd3a1275bc82|675ef7034dca23f8|ec8507c8af69c94d|-273274491||t19318.9889483313s|1c3dae8ecd2236ca|15914769|rds|local|vector|||0.31||
 process_data_aggregate|function|553c63dc8561a597|||||||||||||||
 process_replica_data|function|3992651d406e1494|||||||||||||||
+process_trip_data|function|f45d3d52f9f5e45a|||||||||||||||
 purrr_get_safe_results|function|7dd16a0722387d2d|||||||||||||||
 query_database|function|d5ed95e5fc01503d|||||||||||||||
 query_database_count|function|ba67deb00d5e3f90|||||||||||||||

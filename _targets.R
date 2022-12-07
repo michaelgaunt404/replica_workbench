@@ -88,6 +88,11 @@ list(
                              ,schema_table ="wsp.south_central_2021_Q4_thursday_trip_custom_taz"
                              ,temp_table = "replica-customer._script25786380456a801dfb962e82f9f96b037012d3c5.temp_table_k_lmt_dl"
                              ,limit = NA))
+  ,tar_target(mem_data_trip_custom_0219
+              ,query_replica(data = mem_query_poly_custom 
+                             ,schema_table ="wsp.south_central_2019_Q4_thursday_trip_custom_taz"
+                             ,temp_table = "replica-customer._script7658d8831c3644ddc6c27df73abff2b7f5895bdb.temp_table_k_lmt_dl"
+                             ,limit = NA))
   ,tar_target(mem_data_pro_agg_custom
               ,process_data_aggregate(
                 query_poly = mem_query_poly_custom
