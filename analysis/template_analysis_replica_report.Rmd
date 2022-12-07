@@ -1,0 +1,138 @@
+---
+# title: "Freight OD Cluster Analysis"
+# date: "`r Sys.Date()`"
+# author: "Mike Gaunt \n michael.gaunt@wsp.com"
+# output: 
+#   flexdashboard::flex_dashboard:
+#     orientation: columns
+#     vertical_layout: fill
+params:
+  network: "mem_data_network_objects_custom"
+  od: "mem_spatial_od_polys"
+  polys: "mem_query_poly_custom"
+  analysis: "od"
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 95vw;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = FALSE, cache.lazy = FALSE, autodep = TRUE
+  ,warning = F,message = F, echo = F
+  ,dpi = 180,fig.width = 8, fig.height = 5
+  )
+```
+
+
+
+
+<!--#library set-up=============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+```{r}
+# params$network
+# params$analysis
+library(targets)
+library(sf)
+```
+
+```{r}
+params_analysis = params$analysis
+params_network = params$network
+params_od = params$od
+params_polys = params$polys
+```
+
+```{r}
+# params_network = "mem_data_network_objects_custom"
+# tar_read_raw(params_network)
+```
+
+
+
+
+<!--#source helpers/utilities===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+
+```{js}
+<!-- function filter_default() { -->
+<!--     document.getElementById("dataset").getElementsByClassName("selectized")[0].selectize.setValue("2021_Q2_thursday_trip", false); -->
+<!-- } -->
+<!-- window.onload = filter_default; -->
+```
+
+
+<!--#source data================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev 
+#area to upload data with and to perform initial munging
+#please add test data here so that others may use/unit test these scripts -->
+
+```{r}
+data_network = tar_read_raw(params_network)
+data_od = tar_read_raw(params_od)
+data_polys = tar_read_raw(params_polys)
+```
+
+```{r}
+# mem_data_network_objects %>%  st_drop_geometry() %>%  head()
+```
+
+
+
+<!-- #SECTION NAME=============================================================== -->
+<!-- #use this header to make demarcations/section in code [delete this line] -->
+<!-- #short description  -->
+
+```{r}
+if (params_analysis == "od"){
+  # print("od")
+  make_map_origin(network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
+} else if (params_analysis == "anlto"){
+  # print("anlto")
+  make_network_map_anlto(network_objects = data_network
+                      ,network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
+} else if (params_analysis == "anlt"){
+  # print("anlt")
+  make_network_map_anlt(network_objects = data_network
+                      ,network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
+} else if (params_analysis == "anl"){
+  # print("anl")
+  make_network_map_anl(network_objects = data_network
+                      ,network_objects_poly = data_od
+                      ,file_query_poly = data_polys)
+}
+
+```
+
+
+
+
+<!-- ### Tab {.tabset} -->
+
+<!-- #### Origins -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- #### Destinations -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- ### {-} -->
+
+<!--end-->

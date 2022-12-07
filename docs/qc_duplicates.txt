@@ -1,0 +1,57 @@
+#chunk_1~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#========================================================================================
+#makes temp table
+#makes index attribute - each trip (unique activity) should be numbered 1-max for start_taz
+BEGIN
+CREATE TEMP TABLE temp_table_k_lmt_dl_1 as 
+SELECT
+activity_id
+,start_taz, origin_bgrp, origin_bgrp_lat, origin_bgrp_lng
+,end_taz,destination_bgrp_lat, destination_bgrp_lng, destination_bgrp
+,vehicle_type, start_time, end_time, distance_miles, network_link_ids, ROW_NUMBER () OVER (PARTITION BY start_taz) index
+    FROM `wsp.south_central_2021_Q4_thursday_trip_custom_taz`
+    WHERE mode = 'COMMERCIAL';
+end;
+
+#chunk_2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#========================================================================================
+#checks for unique index/activity_id
+
+#YOU CAN USE THE SAME TABLE AS BELOW BUT IF YOU CREATE A NEW ONE THE TABLE ID WILL NEED TO BE CHANGED
+with temp as(
+select * FROM `replica-customer._script365b2ae8013967ea116bdf092e96c2156a253277.temp_table_k_lmt_dl_1`
+where start_taz in ('1_Millington','10_Southaven','11_Olive Branch','12_Lamar') AND
+activity_id = '3427837329202121459'
+) select  * from temp;
+
+#problem - returns four records where all attributes are the same except for index 
+
+#chunk_3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#========================================================================================
+SELECT *
+FROM `wsp.south_central_2021_Q4_thursday_trip_custom_taz`
+where activity_id = '3427837329202121459';
+
+#problem - still persists in original table
+
+
+
+#FIX ATTMEPT~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#========================================================================================
+#does not work as DISTINCT function cannot be applied to array attributes like network_link_id
+with temp as(
+SELECT 
+DISTINCT
+activity_id
+,start_taz, origin_bgrp, origin_bgrp_lat, origin_bgrp_lng
+,end_taz,destination_bgrp_lat, destination_bgrp_lng, destination_bgrp
+,vehicle_type, start_time, end_time, distance_miles
+--,network_link_ids
+    FROM `wsp.south_central_2021_Q4_thursday_trip_custom_taz`
+    WHERE mode = 'COMMERCIAL' AND start_taz = '12_Lamar'
+) select *, ROW_NUMBER () OVER (PARTITION BY start_taz) index from temp limit 20;
+
+
+
+
+ 

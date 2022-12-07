@@ -79,7 +79,9 @@ network_portland = network_reduced_spatially
 
 network_reduced_spatially %>%  nrow()
 
-network_df = network %>%  sample_n(100000) %>%  st_drop_geometry()
+network_df = network %>%  
+  sample_n(100000) %>%  
+  st_drop_geometry()
 
 network_df %>%  nrow()
 

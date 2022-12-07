@@ -69,8 +69,8 @@ library(targets)
 #please add test data here so that others may use/unit test these scripts -->
 
 ```{r}
-mem_data_network_objects = tar_read("mem_data_network_objects")
-mem_query_poly = tar_read("mem_query_poly")
+mem_data_network_objects = tar_read("mem_data_network_objects_custom")
+mem_query_poly = tar_read("mem_query_poly_custom")
 ```
 
 

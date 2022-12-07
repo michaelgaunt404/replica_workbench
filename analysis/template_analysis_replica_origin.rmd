@@ -6,6 +6,9 @@
 #   flexdashboard::flex_dashboard:
 #     orientation: columns
 #     vertical_layout: fill
+params:
+  network: "mem_data_network_objects_custom"
+  analysis: "od"
 ---
 
 <style type="text/css">
@@ -25,21 +28,6 @@ knitr::opts_chunk$set(
 ```
 
 
-<!--#general comments===========================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#
-# This is [[insert description here - what it does/solve]]
-#
-# By: mike gaunt, michael.gaunt@wsp.com
-#
-# README: [[insert brief readme here]]
-#-------- [[insert brief readme here]]
-#
-# *please use 80 character margins
-# *please go to https://pkgs.rstudio.com/flexdashboard/articles/layouts.html
-# to explore the different layouts available for the flexdashboard framework
-#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
 
 <!--#library set-up=============================================================
@@ -69,8 +57,11 @@ library(targets)
 #please add test data here so that others may use/unit test these scripts -->
 
 ```{r}
-mem_data_network_objects = tar_read("mem_data_network_objects")
-mem_query_poly = tar_read("mem_query_poly")
+mem_data_network_objects = tar_read("mem_data_network_objects_custom")
+mem_data_network_objects[[3]] %>%  
+  head() %>%  
+  st_drop_geometry() 
+# mem_query_poly = tar_read("mem_query_poly_custom")
 ```
 
 
@@ -79,7 +70,25 @@ mem_query_poly = tar_read("mem_query_poly")
 <!-- #short description  -->
 
 ```{r}
-make_network_map_anlto(mem_data_network_objects, mem_query_poly)
+
+params_analysis = params$analysis
+
+if (params_analysis == "od"){
+  print("od")
+  # make_map_origin(mem_data_network_objects, mem_query_poly)
+} else if (params_analysis == "anlto"){
+  print("anlto")
+  # make_network_map_anlto(mem_data_network_objects, mem_query_poly)
+} else if (params_analysis == "anlt"){
+  print("anlt")
+  # make_network_map_anlt(mem_data_network_objects, mem_query_poly)
+} else if (params_analysis == "anl"){
+  print("anl")
+  # make_network_map_anl(mem_data_network_objects, mem_query_poly)
+}
+
+
+# make_network_map_anlto(mem_data_network_objects, mem_query_poly)
 
 ```
 

@@ -17,7 +17,7 @@
 library(gauntlet)
 
 pkgs = c("tibble", "tidyverse", "sf", "tigris", "shiny"
-         ,"here", "DBI", "bigrquery", "htmltools"
+         ,"here", "DBI", "bigrquery", "htmltools", "data.table"
          ,"crosstalk", "leaflet", "leafem", "mapview", "gauntlet", "DT"
          ,"flexdashboard", "tarchetypes")
 
@@ -45,6 +45,13 @@ tar_make('data_icrs_raw')
 tar_read("data_icrs_raw")
 tar_make('file_icrs')
 tar_read("file_icrs")
+
+
+yolo = tar_read("mem_data_trip_custom")
+yolo_2 = tar_read("mem_data_pro_agg_custom")
+
+
+
 
 
 #script end=====================================================================
