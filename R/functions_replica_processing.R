@@ -133,6 +133,8 @@ data_converage = function(data){
 
 process_trip_data = function(network, data, query_poly
                                   ,rm_self = T, rm_ext = T){
+  #NOTE: this will return more rows on purpose 
+  #filter na counts to return to original size
   message("Preping data...")
   
   query_poly = query_poly %>%
@@ -148,14 +150,14 @@ process_trip_data = function(network, data, query_poly
   query_poly_df_notpoi = query_poly_df %>%
     rename(end_taz_group = group)
   
-  yolo = data %>%
+  data %>%
     mutate(count = 1) %>%
     mutate(dataset = "south_central_2021_Q4_thursday") %>%
     select(c('dataset', 'activity_id', 'start_taz'
              ,'end_taz', 'vehicle_type', 'network_link_ids', 'count')) %>%
     merge(., query_poly_df_poi %>%
             select(id, start_taz_group)
-          ,by.x = "start_taz", by.y = "id") %>% 
+          ,by.x = "start_taz", by.y = "id", all = T) %>% 
     merge(., query_poly_df_notpoi %>%
             select(id, end_taz_group, flag_poi) %>%
             rename(flag_poi_end = flag_poi)

@@ -126,95 +126,26 @@ map_elemet_poi = function(base_map){
     #   ,values = query_poly_poi$count_tll_origin) 
 } 
 
-#connectivity====================================================================
+#connectivity===================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-##freight clusters==================================================================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#poi-to-poi links counts
-processed_data = data_pro %>%  
-  filter(start_taz != end_taz) %>% #removes self-to-self
-  filter(flag_sa_end != 'external') %>%  #removes external trips
-  filter(end_taz %in% index_start_taz) %>%  #keeps only poi-to-poi
-  unnest_network_links(.) %>%  
-  count_percent_zscore_dt(
-    grp_c = c('network_link_ids_trunc')
-    ,grp_p = c()
-    ,col = 'count') %>% 
-  .[,`:=`(count_pRank_adj = dgt2(percent_rank(count))
-          ,count_adj_max = dgt2(count/max(count)))] 
-
-spatial_data = merge_processed_links(data = processed_data
-                             ,network = network_pnt) 
-
-spatial_data_sd = SharedData$new(spatial_data)
-
-color_variable = "count_adj_max"
-color_index = spatial_data[[color_variable]]
-
-pal_centroids_od = colorNumeric(
-  palette = "magma",color_index,reverse = T)
-
-bscols(widths = c(12)
-       ,filter_slider("net_sd_count", "Link Volume (vehicle counts):"
-                      ,spatial_data_sd, ~count)
-       ,filter_slider("net_sd_count_adj_max", "Link Volume (min/max normalized)"
-                      ,spatial_data_sd, ~count_adj_max)
-       ,leaflet(height = 700) %>%
-         addTiles(group = "OSM (default)") %>%
-         leaflet_default_tiles() %>%
-         addCircleMarkers(data = spatial_data_sd
-                        ,fillColor = ~pal_centroids_od(color_index)
-                        ,color = "black"
-                        ,opacity = .8
-                        ,fillOpacity  = .5
-                        ,weight = 1
-                        ,radius = ~(count_adj_max*10)
-                        ,group = "Network Links (mid-points)"
-                        ,label = color_index) %>%
-         map_elemet_poi() %>% 
-         #layer control--
-       addLayersControl(
-         baseGroups = leaflet_default_tiles_index
-         ,overlayGroups =
-           c("Network Links (mid-points)"
-             ,"POI Polygons", "Non-POI Study Area Polygons")
-         ,options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
-         hideGroup(c("Network Links (mid-points)", "Non-POI Study Area Polygons")) %>% 
-         setView(lng= -89.96, lat = 35.11, zoom = 11) %>%
-         addMouseCoordinates() %>%
-         ##legends~~~~
-       addLegend(
-         position = "bottomleft"
-         ,title = HTML("Link Volume")
-         ,group = "Network Links (mid-points)"
-         ,pal = pal_centroids_od
-         ,opacity = 0.7
-         ,values = color_index) 
-)    
-
-spatial_data_for_map = merge_processed_links(data = processed_data
-                                     ,network = network) %>%  
-  filter(count > 9) %>%  
-  filter(count_adj_max >= .1)
-
-spatial_data_for_map %>%  
-  summarise(min(count))
-
-##Terminals=====================================================================
+##make_data====================================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 unique(data_pro %>% select(start_taz_group, start_taz, flag_poi_end, flag_sa_end))
 
 filtered_data = data_pro %>% 
-###filter_poi to internal----
-filter(start_taz != end_taz) %>%  #removes self-to-self - should be on for all filters
-filter(flag_sa_end != 'external')  #only internal-to-external
+  ###filter_poi to internal----
+# filter(start_taz != end_taz) %>%  #removes self-to-self - should be on for all filters
+#   filter(flag_sa_end != 'external')  #only internal-to-external
 ###filter_fedex----
 # filter(start_taz != end_taz) %>%  #removes self-to-self - should be on for all filters
 #   filter(str_detect(start_taz_group, "Fed"))
 ###filter_airport----
 # filter(start_taz != end_taz) %>%  #removes self-to-self - should be on for all filters
 #   filter(str_detect(start_taz_group, "MEM Airport"))
+###filter_airport----
+filter(start_taz != end_taz) %>%  #removes self-to-self - should be on for all filters
+  filter(str_detect(end_taz_group, "MEM Airport"))
 ###filter_rail----
 # filter(start_taz != end_taz) %>%  #removes self-to-self - should be on for all
 #   filter(str_detect(start_taz_group, "BNSF") |
@@ -231,7 +162,7 @@ filter(flag_sa_end != 'external')  #only internal-to-external
 # filter(start_taz != end_taz)
 ###end----
 
-unique(filtered_data %>% select(start_taz_group, start_taz, flag_poi_end, flag_sa_end))
+unique(filtered_data %>% select(end_taz_group, start_taz, flag_poi_end, flag_sa_end))
 
 processed_data = filtered_data %>%  
   unnest_network_links(.) %>%  
@@ -246,9 +177,10 @@ processed_data = filtered_data %>%
 processed_data_ie = processed_data %>%  
   filter(flag_sa_end != "external")
 
-
-##static polyline map============================================================
+##static_polyline_map============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#prep_for_map
 {
   spatial_data = merge_processed_links(data = processed_data_ie
                                        ,network = network_lnk
@@ -262,45 +194,53 @@ processed_data_ie = processed_data %>%
   
   # min_filtered = min(spatial_data_filtered$count)
   
+  color_variable = "count"
+  color_index = spatial_data_filtered[[color_variable]]
+  
+  pal_centroids_od = colorNumeric(
+    palette = "magma",color_index,reverse = T)
+  
 }
 
-mapview(spatial_data_filtered
-        ,lwd)
-
-leaflet(height = 700) %>%
-  addTiles(group = "OSM (default)") %>%
-  leaflet_default_tiles() %>%
-  addPolylines(data = spatial_data_filtered
-               # ,fillColor = ~pal_centroids_od(color_index)
-               # ,color = ~pal_centroids_od(color_index)
-               # ,width = 5
-               ,opacity = 1
-               ,fillOpacity  = .5
-               ,weight = rescale_to(spatial_data_filtered$count, 20)
-               # ,radius = ~(count_adj_max*10)
-               ,group = "Network Links (mid-points)"
-               ,label = ~count
-  ) %>%
-  map_elemet_poi() %>% 
-  #layer control---
-addLayersControl(
-  baseGroups = leaflet_default_tiles_index
-  ,overlayGroups =
-    c("Network Links (mid-points)"
-      ,"POI Polygons", "Non-POI Study Area Polygons")
-  ,options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
-  hideGroup(c("Network Links (mid-points)", "Non-POI Study Area Polygons")) %>% 
-  setView(lng= -89.96, lat = 35.11, zoom = 11) %>%
-  addMouseCoordinates() 
-
-# list(
-#   min_old = min_old
-#   ,min_filtered = min_filtered) %>%  print()
+#make_leaflet_map
+{
+  leaflet(height = 700) %>%
+    addTiles(group = "OSM (default)") %>%
+    leaflet_default_tiles() %>%
+    addPolylines(data = spatial_data_filtered
+                 ,color = ~pal_centroids_od(color_index)
+                 ,opacity = 1
+                 ,fillOpacity  = .5
+                 ,weight = rescale_to(spatial_data_filtered$count, 20)
+                 ,group = "Network Links (mid-points)"
+                 ,label = ~count
+    ) %>%
+    map_elemet_poi() %>% 
+    #layer control---
+    addLayersControl(
+      baseGroups = leaflet_default_tiles_index
+      ,overlayGroups =
+        c("Network Links (mid-points)"
+          ,"POI Polygons", "Non-POI Study Area Polygons")
+      ,options = layersControlOptions(collapsed = F, sortLayers = F)) %>%
+    hideGroup(c("Network Links (mid-points)", "Non-POI Study Area Polygons")) %>% 
+    setView(lng= -89.96, lat = 35.11, zoom = 11) %>%
+    addMouseCoordinates() %>% 
+    #legends---
+    addLegend(
+      position = "bottomleft"
+      ,title = HTML("Link Volume")
+      ,group = "Network Links (mid-points)"
+      ,pal = pal_centroids_od
+      ,opacity = 0.7
+      ,values = color_index)
+}
 
 # file_name = "terminal_links_fedEx_to_internal.gpkg"
 # file_name = "terminal_links_airport_to_internal.gpkg"
 # file_name = "terminal_links_memPortwithFedEx_to_internal.gpkg"
 # file_name = "terminal_links_rail_to_internal.gpkg"
+file_name = "terminal_links_internal_to_airport.gpkg"
 # file_name = "terminal_links_poi_to_poi.gpkg"
 # file_name = "terminal_links_poi_to_internal.gpkg"
 # file_name = "clusters_links_poi_to_poi.gpkg"
@@ -308,20 +248,23 @@ addLayersControl(
 # file_name = "clusters_links_poi_to_external.gpkg"
 
 here("data/memphis_req/data_for_report", file_name) %>%  
-  write_sf(spatial_data_filtered, .)
+  write_sf(spatial_data, .)
 
 ##static poly map============================================================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   processed_data_poly = filtered_data %>%  
     select(!network_link_ids) %>%  
-    count(end_taz, name = "count", sort = T) %>%  
+    count(start_taz, name = "count", sort = T) %>%  
+    # count(end_taz, name = "count", sort = T) %>%  
     mutate(count_adj_max = count/max(count))
   
   
   spatial_data_poly = merge(query_poly
                             ,processed_data_poly
-                            ,by.x = c('id'), by.y = c("end_taz")
+                            ,by.x = c('id')
+                            ,by.y = c("start_taz")
+                            # ,by.y = c("end_taz")
                             ,all = T)
   
   # min_old = min(spatial_data_poly$count)
@@ -337,8 +280,8 @@ here("data/memphis_req/data_for_report", file_name) %>%
 mapview(spatial_data_poly, zcol = "count")
 {
   (spatial_data_poly %>%  
-     filter(count >= 5) %>%
-     na.omit() %>% 
+     # filter(count >= 5) %>%
+     # na.omit() %>% 
      mapview(zcol = "count", layer.name = "od") +
 (spatial_data_filtered %>%  
     mutate(lwd = rescale_to(count, 25)) %>% 
@@ -352,7 +295,8 @@ mapview(spatial_data_poly, zcol = "count")
 }
 # file_name = "terminal_polyspatial_data_polys_airportwithFedEx_to_internal.gpkg"
 # file_name = "terminal_polys_rail_to_internal.gpkg"
-file_name = "terminal_polys_airportwithFedEx_to_internal.gpkg"
+file_name = "terminal_polys_internal_to_airport.gpkg"
+# file_name = "terminal_polys_airportwithFedEx_to_internal.gpkg"
 
 mapview(spatial_data_poly, zcol = "count")
 
